@@ -1,0 +1,22 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+*.db
+*.sqlite
+*.log
+
+# Not part of the deployed backend
+training
+frontend
+node_modules
+dist
+build
+backups
+tests
+supabase
+.env
+.env.*
+!.env.example
+REACT_AUDIT_REPORT.md

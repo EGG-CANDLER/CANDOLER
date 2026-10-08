@@ -16,6 +16,7 @@ __pycache__/
 *.pyo
 *.sqlite
 *.db
+.pytest_cache/
 
 # ---- Training data (NOT deployed) ----
 training/dataset/
