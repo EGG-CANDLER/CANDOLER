@@ -1,0 +1,35 @@
+# ---- Secrets / environment ----
+.env
+.env.*
+!.env.example
+
+# ---- Node / frontend build ----
+node_modules/
+dist/
+build/
+
+# ---- Python ----
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite
+*.db
+
+# ---- Training data (NOT deployed) ----
+training/dataset/
+training/yolo_dataset/
+training/runs/
+
+# ---- Logs ----
+*.log
+
+# ---- OS / editors ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# NOTE: models/egg_candling_best.pt is intentionally NOT ignored —
+# it is the trained model and must be committed.

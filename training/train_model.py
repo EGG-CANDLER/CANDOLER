@@ -9,6 +9,16 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+# This script now lives in training/. Add the project root to sys.path so the
+# sealed config.py (at the repo root) can still be imported, then re-point the
+# dataset/output paths at the training/ folder (config.py itself is not edited).
+import sys
+
+TRAINING_DIR = Path(__file__).resolve().parent
+ROOT_DIR = TRAINING_DIR.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from config import (
     FALLBACK_PRETRAINED_CLS_MODEL,
     MODEL_PATH,
@@ -18,9 +28,14 @@ from config import (
     YOLO_DATASET_DIR,
 )
 
+# Override root-relative training paths to follow the training/ folder.
+YOLO_DATASET_DIR = TRAINING_DIR / "yolo_dataset"
+RUNS_DIR = TRAINING_DIR / "runs"
+
 # ---- configurable training settings (laptop-friendly) ----
 DATASET_DIR = YOLO_DATASET_DIR
-MODEL_NAME = PRETRAINED_CLS_MODEL
+_local_pretrained = TRAINING_DIR / PRETRAINED_CLS_MODEL
+MODEL_NAME = str(_local_pretrained) if _local_pretrained.is_file() else PRETRAINED_CLS_MODEL
 IMG_SIZE = 224
 EPOCHS = 40
 BATCH = 8

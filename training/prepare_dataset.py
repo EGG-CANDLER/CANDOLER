@@ -11,6 +11,16 @@ from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
 
+# This script now lives in training/. Add the project root to sys.path so the
+# sealed config.py (at the repo root) can still be imported, then re-point the
+# dataset paths at the training/ folder (config.py itself is not edited).
+import sys
+
+TRAINING_DIR = Path(__file__).resolve().parent
+ROOT_DIR = TRAINING_DIR.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from config import (
     DATASET_DIR,
     EXPECTED_DAYS,
@@ -18,6 +28,10 @@ from config import (
     YOLO_DATASET_DIR,
     day_folder_name,
 )
+
+# Override root-relative dataset paths to follow the training/ folder.
+DATASET_DIR = TRAINING_DIR / "dataset"
+YOLO_DATASET_DIR = TRAINING_DIR / "yolo_dataset"
 
 RANDOM_SEED = 42
 TRAIN_RATIO = 0.80
