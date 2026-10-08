@@ -3,11 +3,13 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 
 import App from './App.jsx'
+import { ElectricBorderDefs } from './components/ui/ElectricBorder.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    <ElectricBorderDefs />
     <BrowserRouter>
       <AuthProvider>
         <App />

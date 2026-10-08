@@ -34,3 +34,7 @@ Thumbs.db
 
 # NOTE: models/egg_candling_best.pt is intentionally NOT ignored —
 # it is the trained model and must be committed.
+
+# ---- Local reports / dev logs ----
+REACT_AUDIT_REPORT.md
+devlog.txt
