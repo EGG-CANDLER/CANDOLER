@@ -24,7 +24,7 @@ function smoothPath(pts) {
   return d
 }
 
-// Glowing smooth area/line chart with hover tooltips + draw-in animation.
+// Glowing smooth area/line chart with hover tooltips + draw-in animation in white glass.
 export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 132, format }) {
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const [hover, setHover] = useState(-1)
@@ -51,11 +51,16 @@ export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 132, f
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ height }} role="img" aria-hidden="true">
         <defs>
           <linearGradient id={`ag${gid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2FF3CF" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#2FF3CF" stopOpacity="0" />
+            <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
+          <linearGradient id={`al${gid}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,1)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.8)" />
           </linearGradient>
           <filter id={`line${gid}`}>
-            <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#2FF3CF" floodOpacity="0.6" />
+            <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#FFFFFF" floodOpacity="0.7" />
           </filter>
         </defs>
         {[0.25, 0.5, 0.75].map((f) => (
@@ -66,8 +71,8 @@ export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 132, f
           className="area-line"
           d={line}
           fill="none"
-          stroke="#4CF5D6"
-          strokeWidth="4"
+          stroke={`url(#al${gid})`}
+          strokeWidth="3.5"
           strokeLinecap="round"
           filter={`url(#line${gid})`}
         />
@@ -100,7 +105,7 @@ export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 132, f
   )
 }
 
-// Donut chart with rounded caps, animated on load, tooltip on hover.
+// Donut chart in pure white glass style.
 export function DonutChart({ value = 0, size = 150, thickness = 18, centerTop = '', centerBottom = '' }) {
   const pct = clampPct(value)
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '')
@@ -121,11 +126,11 @@ export function DonutChart({ value = 0, size = 150, thickness = 18, centerTop = 
       <svg className="donut" viewBox="0 0 120 120" style={{ width: size, height: size }}>
         <defs>
           <linearGradient id={`dg${gid}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2FF3CF" />
-            <stop offset="100%" stopColor="#1C8F80" />
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.6)" />
           </linearGradient>
           <filter id={`clay${gid}`}>
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#FFFFFF" floodOpacity="0.25" />
           </filter>
         </defs>
         <circle cx="60" cy="60" r={R} className="donut-track" strokeWidth={thickness} />
@@ -151,7 +156,7 @@ export function DonutChart({ value = 0, size = 150, thickness = 18, centerTop = 
   )
 }
 
-// Vertical pill bars with outlined tracks + glowing fill — grow on value change.
+// Vertical pill bars in white glass style.
 export function BarPillChart({ items = [] }) {
   const [grown, setGrown] = useState(false)
   useEffect(() => {
@@ -181,4 +186,3 @@ export function BarPillChart({ items = [] }) {
     </div>
   )
 }
-
