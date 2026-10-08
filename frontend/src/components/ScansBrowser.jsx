@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { api } from '../lib/api'
 import ImageModal from './ImageModal'
+import PillButton from './ui/PillButton'
 
 const DAYS = Array.from({ length: 21 }, (_, index) => `Day ${index + 1}`)
 const PER_PAGE = 10
@@ -91,15 +92,53 @@ export default function ScansBrowser({ mode }) {
   const pages = data?.pages ?? 1
   const currentPage = data?.page ?? page
 
+  // ---- Derived summary chips (same data, presentation only) ----
+  const confidences = logs
+    .map((item) => item.confidence)
+    .filter((v) => typeof v === 'number')
+  const avgConf = confidences.length
+    ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+    : null
+  const topDay = (() => {
+    const counts = {}
+    logs.forEach((item) => {
+      if (item.predicted_day) counts[item.predicted_day] = (counts[item.predicted_day] || 0) + 1
+    })
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    return entries.length ? entries[0][0] : '—'
+  })()
+
   return (
       <section className="card">
-        <div className="card-head">
-          <h2>{isArchived ? 'Archive' : 'Detection logs'}</h2>
-          <p className="muted">
-            {isArchived
-              ? 'Review archived detections and restore them to your active history.'
-              : 'All saved YOLO analyses stored in Supabase.'}
-          </p>
+        <div className="page-head" style={{ marginBottom: 0 }}>
+          <div>
+            <h2>{isArchived ? 'Archive' : 'Detection logs'}</h2>
+            <p className="muted">
+              {isArchived
+                ? 'Review archived detections and restore them to your active history.'
+                : 'All saved YOLO analyses stored in Supabase.'}
+            </p>
+          </div>
+          <span className="count-pill">{total} records</span>
+        </div>
+
+        <div className="stat-strip" aria-label="Summary">
+          <div className="stat-chip">
+            <small>Records</small>
+            <strong className="mint">{total}</strong>
+          </div>
+          <div className="stat-chip">
+            <small>Avg confidence</small>
+            <strong>{avgConf === null ? '—' : `${avgConf.toFixed(1)}%`}</strong>
+          </div>
+          <div className="stat-chip">
+            <small>Top day</small>
+            <strong>{topDay}</strong>
+          </div>
+          <div className="stat-chip">
+            <small>Page</small>
+            <strong>{currentPage} / {pages}</strong>
+          </div>
         </div>
 
         <div className="filters">
@@ -119,8 +158,8 @@ export default function ScansBrowser({ mode }) {
           </label>
 
           <div className="filter-actions">
-            <button className="btn btn-primary" type="button" onClick={applyFilters}>Apply</button>
-            <button className="btn btn-secondary" type="button" onClick={resetFilters}>Reset</button>
+            <PillButton variant="primary" onClick={applyFilters}>Apply</PillButton>
+            <PillButton variant="dark" onClick={resetFilters}>Reset</PillButton>
           </div>
         </div>
 
@@ -177,17 +216,17 @@ export default function ScansBrowser({ mode }) {
                     <td>{item.date}</td>
                     <td>{item.time}</td>
                     <td className="row-actions">
-                      <button className="btn btn-primary btn-sm" type="button" onClick={() => setModalItem(item)}>
+                      <PillButton variant="primary" size="sm" onClick={() => setModalItem(item)}>
                         View
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        type="button"
+                      </PillButton>
+                      <PillButton
+                        variant="dark"
+                        size="sm"
                         disabled={busyId === item.id}
                         onClick={() => handleAction(item)}
                       >
                         {busyId === item.id ? '…' : isArchived ? 'Restore' : 'Archive'}
-                      </button>
+                      </PillButton>
                     </td>
                   </tr>
                 ))}
@@ -198,25 +237,23 @@ export default function ScansBrowser({ mode }) {
 
         {!loading && logs.length > 0 && (
           <div className="pager">
-            <button
-              className="btn btn-secondary"
-              type="button"
+            <PillButton
+              variant="dark"
               disabled={currentPage <= 1}
               onClick={() => setPage(Math.max(1, currentPage - 1))}
             >
               Previous
-            </button>
+            </PillButton>
             <span className="page-info">
               Page {currentPage} of {pages} ({total} records)
             </span>
-            <button
-              className="btn btn-secondary"
-              type="button"
+            <PillButton
+              variant="dark"
               disabled={currentPage >= pages}
               onClick={() => setPage(currentPage + 1)}
             >
               Next
-            </button>
+            </PillButton>
           </div>
         )}
 
