@@ -4,11 +4,13 @@ import {
   Archive,
   Camera,
   FileText,
-  FlaskConical,
   LogOut,
   Shield,
   Sparkles,
 } from 'lucide-react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 import { useAuth } from '../context/AuthContext'
 import { Avatar, AvatarBadge, AvatarFallback } from './ui/avatar'
@@ -34,6 +36,8 @@ import {
 } from './ui/sidebar'
 import Logo from './Logo'
 
+gsap.registerPlugin(useGSAP, ScrollTrigger)
+
 const NAV_ITEMS = [
   { to: '/', label: 'Scanner', icon: Camera, exact: true },
   { to: '/logs', label: 'Detection Logs', icon: FileText },
@@ -46,6 +50,42 @@ export default function Layout() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const contentRef = React.useRef(null)
+  const footerRef = React.useRef(null)
+
+  // GSAP Route Transition: smooth fade and subtle slide on location change
+  useGSAP(
+    () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      if (!contentRef.current) return
+
+      gsap.fromTo(
+        contentRef.current,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' },
+      )
+    },
+    { dependencies: [location.pathname] },
+  )
+
+  // GSAP ScrollTrigger for footer reveal
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!footerRef.current) return
+
+    ScrollTrigger.create({
+      trigger: footerRef.current,
+      start: 'top bottom-=50',
+      onEnter: () => {
+        gsap.fromTo(
+          footerRef.current,
+          { opacity: 0, y: 15 },
+          { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' },
+        )
+      },
+      once: true,
+    })
+  }, [])
 
   async function handleLogout() {
     try {
@@ -102,8 +142,9 @@ export default function Layout() {
                         to={item.to}
                         isActive={active}
                         tooltip={item.label}
+                        className="group/btn hover:translate-x-0.5 active:scale-[0.98] transition-all duration-150"
                       >
-                        <Icon className="size-4" />
+                        <Icon className="size-4 group-hover/btn:scale-110 group-hover/btn:text-primary transition-transform duration-200" />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -142,7 +183,7 @@ export default function Layout() {
                 size="icon-xs"
                 onClick={handleLogout}
                 title="Log out"
-                className="text-sidebar-foreground/70 hover:text-destructive"
+                className="text-sidebar-foreground/70 hover:text-destructive hover:scale-105 active:scale-95 transition-transform"
               >
                 <LogOut className="size-3.5" />
                 <span className="sr-only">Log out</span>
@@ -162,8 +203,8 @@ export default function Layout() {
               <span className="text-sm font-medium text-foreground">
                 {currentPageTitle}
               </span>
-              <Badge variant="secondary" className="hidden sm:inline-flex text-[11px] py-0 px-2">
-                Live
+              <Badge variant="secondary" className="hidden sm:inline-flex text-[11px] py-0 px-2 gap-1.5">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
               </Badge>
             </div>
           </div>
@@ -174,20 +215,20 @@ export default function Layout() {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="hidden sm:inline-flex text-xs h-8"
+              className="hidden sm:inline-flex text-xs h-8 hover:border-destructive/50 hover:text-destructive active:scale-[0.98] transition-all"
             >
               Log out
             </Button>
           </div>
         </header>
 
-        {/* Content Body */}
-        <div className="flex-1 p-4 sm:p-6 max-w-360 w-full mx-auto">
+        {/* Content Body with GSAP Route Transition */}
+        <div ref={contentRef} className="flex-1 p-4 sm:p-6 max-w-360 w-full mx-auto">
           <Outlet />
         </div>
 
-        {/* Footer: max-w-360 container, responsive flex → column on max-sm */}
-        <footer className="mt-auto border-t border-border bg-card/40 py-6">
+        {/* Footer with GSAP ScrollTrigger reveal */}
+        <footer ref={footerRef} className="mt-auto border-t border-border bg-card/40 py-6">
           <div className="max-w-360 container mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-2 text-center sm:text-left">
               <Logo size={18} />
@@ -198,25 +239,25 @@ export default function Layout() {
             <div className="flex items-center gap-4 text-center sm:text-right">
               <NavLink
                 to="/"
-                className="transition duration-300 hover:text-foreground"
+                className="transition duration-300 hover:text-foreground hover:underline underline-offset-4"
               >
                 Scanner
               </NavLink>
               <NavLink
                 to="/logs"
-                className="transition duration-300 hover:text-foreground"
+                className="transition duration-300 hover:text-foreground hover:underline underline-offset-4"
               >
                 Logs
               </NavLink>
               <NavLink
                 to="/manager"
-                className="transition duration-300 hover:text-foreground"
+                className="transition duration-300 hover:text-foreground hover:underline underline-offset-4"
               >
                 Manager
               </NavLink>
               <NavLink
                 to="/electric-border"
-                className="transition duration-300 hover:text-foreground"
+                className="transition duration-300 hover:text-foreground hover:underline underline-offset-4"
               >
                 FX Lab
               </NavLink>

@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ArrowUpRight,
   Camera,
-  CheckCircle2,
   FileText,
   HelpCircle,
   RefreshCw,
@@ -12,6 +11,8 @@ import {
   Upload,
   VideoOff,
 } from 'lucide-react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 
 import { api } from '../lib/api'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
@@ -26,14 +27,16 @@ import {
   CardTitle,
 } from '../components/ui/Card'
 import { AreaChart, BarPillChart, DonutChart } from '../components/ui/charts'
+import { CountUp } from '../components/ui/CountUp'
 import { BotEgg } from '../components/ui/Decor'
-import ElectricBorder from '../components/ui/ElectricBorder'
 
 const IDEAL = { width: { ideal: 1280 }, height: { ideal: 720 } }
 
 export default function Dashboard() {
+  const dashboardRef = React.useRef(null)
   const videoRef = React.useRef(null)
   const streamRef = React.useRef(null)
+  const scanBeamRef = React.useRef(null)
 
   const [stream, setStream] = React.useState(null)
   const [cameras, setCameras] = React.useState([])
@@ -49,7 +52,48 @@ export default function Dashboard() {
   const [analyzing, setAnalyzing] = React.useState(false)
   const [error, setError] = React.useState('')
 
-  // Model readiness banner.
+  // Staggered entrance animation for cards
+  useGSAP(
+    () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      gsap.from('.gsap-card', {
+        opacity: 0,
+        y: 18,
+        duration: 0.45,
+        stagger: 0.08,
+        ease: 'power2.out',
+      })
+    },
+    { scope: dashboardRef },
+  )
+
+  // Candling scanning beam animation when streaming or analyzing
+  useGSAP(
+    () => {
+      if (!scanBeamRef.current) return
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+      if (analyzing || stream) {
+        gsap.fromTo(
+          scanBeamRef.current,
+          { top: '0%', opacity: 0.8 },
+          {
+            top: '100%',
+            opacity: 0.3,
+            duration: analyzing ? 1.2 : 2.5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+          },
+        )
+      } else {
+        gsap.killTweensOf(scanBeamRef.current)
+      }
+    },
+    { dependencies: [analyzing, stream] },
+  )
+
+  // Model readiness banner
   React.useEffect(() => {
     api.status().then(setModelStatus).catch(() => {})
   }, [])
@@ -243,7 +287,7 @@ export default function Dashboard() {
     cameras.length > 1 ? `${cameras.length} cams` : stream ? 'Live' : 'Off'
 
   return (
-    <div className="flex flex-col gap-6">
+    <div ref={dashboardRef} className="flex flex-col gap-6">
       {/* Model readiness alert if unavailable */}
       {modelStatus && !modelStatus.model_ready && (
         <Alert variant="destructive">
@@ -255,279 +299,301 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      {/* Main Bento Grid */}
+      {/* Main Bento Grid with staggered GSAP entrance */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* ---------------- 1. Live Camera Scanner ---------------- */}
-        <div className="md:col-span-2 lg:col-span-2">
-          <ElectricBorder mode="hover">
-            <Card id="scanner" className="h-full flex flex-col justify-between">
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <div>
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Camera className="size-4 text-primary" /> Live Camera
-                  </CardTitle>
-                  <CardDescription>Candle the egg, capture, and run YOLO inference</CardDescription>
-                </div>
-                <Badge
-                  variant={stream ? 'default' : 'secondary'}
-                  className="gap-1.5 text-xs py-1"
-                >
-                  <span
-                    className={`size-2 rounded-full ${
-                      stream ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'
-                    }`}
-                  />
-                  {cameraStatus}
-                </Badge>
-              </CardHeader>
+        <div className="gsap-card md:col-span-2 lg:col-span-2">
+          <Card id="scanner" className="h-full flex flex-col justify-between">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Camera className="size-4 text-primary animate-pulse" /> Live Camera
+                </CardTitle>
+                <CardDescription>Candle the egg, capture, and run YOLO inference</CardDescription>
+              </div>
+              <Badge
+                variant={stream ? 'default' : 'secondary'}
+                className="gap-1.5 text-xs py-1"
+              >
+                <span
+                  className={`size-2 rounded-full ${
+                    stream ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'
+                  }`}
+                />
+                {cameraStatus}
+              </Badge>
+            </CardHeader>
 
-              <CardContent className="space-y-4">
-                {/* Video container */}
-                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/90 flex items-center justify-center border border-border">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`h-full w-full object-cover ${stream ? 'block' : 'hidden'}`}
-                  />
-                  {!stream && (
-                    <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
-                      <VideoOff className="size-10 mb-2 opacity-50" />
-                      <p className="text-sm font-medium text-foreground">Camera is offline</p>
-                      <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                        Start the live feed or upload a candling photograph to begin.
-                      </p>
-                    </div>
-                  )}
-                </div>
+            <CardContent className="space-y-4">
+              {/* Video container with candling beam effect */}
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/90 flex items-center justify-center border border-border group">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`h-full w-full object-cover ${stream ? 'block' : 'hidden'}`}
+                />
 
-                {cameraError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="size-4" />
-                    <AlertDescription>{cameraError}</AlertDescription>
-                  </Alert>
-                )}
+                {/* Animated candling light scanning sweep */}
+                <div
+                  ref={scanBeamRef}
+                  className={`absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[var(--chart-1)] to-transparent pointer-events-none shadow-[0_0_12px_var(--chart-1)] ${
+                    stream || analyzing ? 'block' : 'hidden'
+                  }`}
+                />
 
-                {/* Camera selector & action buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                  <div className="flex items-center gap-2 flex-1 max-w-xs">
-                    <select
-                      value={deviceId}
-                      onChange={handleSelectCamera}
-                      className="w-full text-xs h-9 rounded-md border border-border bg-background px-3 py-1 text-foreground focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50"
-                    >
-                      <option value="">
-                        {cameras.length ? 'Default camera' : 'No camera detected'}
-                      </option>
-                      {cameras.map((cam, index) => (
-                        <option key={cam.deviceId || index} value={cam.deviceId}>
-                          {cam.label || `Camera ${index + 1}`}
-                        </option>
-                      ))}
-                    </select>
+                {!stream && (
+                  <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                    <VideoOff className="size-10 mb-2 opacity-50" />
+                    <p className="text-sm font-medium text-foreground">Camera is offline</p>
+                    <p className="text-xs text-muted-foreground max-w-sm mt-1">
+                      Start the live feed or upload a candling photograph to begin.
+                    </p>
                   </div>
+                )}
+              </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {!stream ? (
-                      <Button variant="default" size="sm" onClick={handleStart} className="gap-1.5">
-                        <Camera className="size-3.5" /> Start camera
-                      </Button>
-                    ) : (
-                      <Button variant="destructive" size="sm" onClick={stopCamera}>
-                        Stop
-                      </Button>
-                    )}
+              {cameraError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" />
+                  <AlertDescription>{cameraError}</AlertDescription>
+                </Alert>
+              )}
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSwitch}
-                      disabled={!stream}
-                      title="Switch camera"
-                    >
-                      <RefreshCw className="size-3.5" />
-                    </Button>
+              {/* Camera selector & action buttons with micro-interactions */}
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                <div className="flex items-center gap-2 flex-1 max-w-xs">
+                  <select
+                    value={deviceId}
+                    onChange={handleSelectCamera}
+                    className="w-full text-xs h-9 rounded-md border border-border bg-background px-3 py-1 text-foreground focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50"
+                  >
+                    <option value="">
+                      {cameras.length ? 'Default camera' : 'No camera detected'}
+                    </option>
+                    {cameras.map((cam, index) => (
+                      <option key={cam.deviceId || index} value={cam.deviceId}>
+                        {cam.label || `Camera ${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
+                <div className="flex flex-wrap items-center gap-2">
+                  {!stream ? (
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={handleCapture}
-                      disabled={!stream || analyzing}
-                      className="gap-1.5 font-medium"
+                      onClick={handleStart}
+                      className="gap-1.5 hover:-translate-y-0.5 active:scale-95 transition-all"
                     >
-                      <Sparkles className="size-3.5" />
-                      {analyzing ? 'Analyzing…' : 'Capture & analyze'}
+                      <Camera className="size-3.5" /> Start camera
                     </Button>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={stopCamera}
+                      className="hover:-translate-y-0.5 active:scale-95 transition-all"
+                    >
+                      Stop
+                    </Button>
+                  )}
 
-                    <label className="inline-flex cursor-pointer">
-                      <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
-                      <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50">
-                        <Upload className="size-3.5" /> Upload
-                      </span>
-                    </label>
-                  </div>
-                </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSwitch}
+                    disabled={!stream}
+                    title="Switch camera"
+                    className="hover:rotate-180 transition-transform duration-300 active:scale-95"
+                  >
+                    <RefreshCw className="size-3.5" />
+                  </Button>
 
-                {/* Ranked sparkline */}
-                <div className="pt-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                    <span>Ranked prediction distribution</span>
-                    <span className="font-mono">Top 5 classes</span>
-                  </div>
-                  <AreaChart data={sparkValues} labels={sparkLabels} height={96} />
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleCapture}
+                    disabled={!stream || analyzing}
+                    className="gap-1.5 font-medium hover:-translate-y-0.5 active:scale-95 transition-all shadow-xs"
+                  >
+                    <Sparkles className="size-3.5 animate-pulse text-primary-foreground" />
+                    {analyzing ? 'Analyzing…' : 'Capture & analyze'}
+                  </Button>
+
+                  <label className="inline-flex cursor-pointer">
+                    <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
+                    <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground hover:-translate-y-0.5 active:scale-95 transition-all focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50">
+                      <Upload className="size-3.5" /> Upload
+                    </span>
+                  </label>
                 </div>
-              </CardContent>
-            </Card>
-          </ElectricBorder>
+              </div>
+
+              {/* Ranked sparkline */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>Ranked prediction distribution</span>
+                  <span className="font-mono">Top 5 classes</span>
+                </div>
+                <AreaChart data={sparkValues} labels={sparkLabels} height={96} />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* ---------------- 2. AI Analysis Result ---------------- */}
-        <div className="md:col-span-2 lg:col-span-1">
-          <ElectricBorder mode="hover">
-            <Card className="h-full flex flex-col justify-between">
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <div>
-                  <CardTitle className="text-base font-semibold">AI Analysis Result</CardTitle>
-                  <CardDescription className="truncate">
-                    {result ? statusLabel : 'Awaiting egg image capture'}
-                  </CardDescription>
+        <div className="gsap-card md:col-span-2 lg:col-span-1">
+          <Card className="h-full flex flex-col justify-between">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-base font-semibold">AI Analysis Result</CardTitle>
+                <CardDescription className="truncate">
+                  {result ? statusLabel : 'Awaiting egg image capture'}
+                </CardDescription>
+              </div>
+              <Badge variant="outline">Detail</Badge>
+            </CardHeader>
+
+            <CardContent className="space-y-4 flex-1">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {showWarning && (
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" />
+                  <AlertDescription>
+                    {lowConfidence
+                      ? result?.status ||
+                        'Low confidence — please recapture under better candling conditions.'
+                      : warnings.join(' ')}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!result && !preview ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground border border-dashed border-border rounded-xl">
+                  <HelpCircle className="size-8 mb-2 opacity-40 animate-pulse" />
+                  <p className="text-sm font-medium text-foreground">No analysis yet</p>
+                  <p className="text-xs text-muted-foreground max-w-xs mt-1">
+                    Capture or upload an egg to receive real-time incubation classification.
+                  </p>
                 </div>
-                <Badge variant="outline">Detail</Badge>
-              </CardHeader>
-
-              <CardContent className="space-y-4 flex-1">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="size-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                {showWarning && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="size-4" />
-                    <AlertDescription>
-                      {lowConfidence
-                        ? result?.status ||
-                          'Low confidence — please recapture under better candling conditions.'
-                        : warnings.join(' ')}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {!result && !preview ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                    <HelpCircle className="size-8 mb-2 opacity-40" />
-                    <p className="text-sm font-medium text-foreground">No analysis yet</p>
-                    <p className="text-xs text-muted-foreground max-w-xs mt-1">
-                      Capture or upload an egg to receive real-time incubation classification.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Big predicted day headline */}
-                    <div className="text-center py-2 bg-muted/30 rounded-xl border border-border/50">
-                      <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block">
-                        Predicted Incubation
-                      </span>
-                      <div
-                        className={`text-3xl font-extrabold tracking-tight mt-1 ${
-                          lowConfidence ? 'text-destructive' : 'text-foreground'
-                        }`}
-                      >
-                        {dayLabel}
-                      </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Big predicted day headline */}
+                  <div className="text-center py-2 bg-muted/30 rounded-xl border border-border/50">
+                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block">
+                      Predicted Incubation
+                    </span>
+                    <div
+                      className={`text-3xl font-extrabold tracking-tight mt-1 ${
+                        lowConfidence ? 'text-destructive' : 'text-foreground'
+                      }`}
+                    >
+                      {dayLabel}
                     </div>
+                  </div>
 
-                    {/* Confidence track */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">AI Confidence</span>
-                        <span className="font-mono font-semibold text-foreground">
-                          {confLabel === '—' ? '—' : `${confidence.toFixed(2)}%`}
-                        </span>
-                      </div>
-                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500 ease-out"
-                          style={{
-                            width: `${confidence ?? 0}%`,
-                            backgroundColor: lowConfidence
-                              ? 'var(--destructive)'
-                              : 'var(--chart-1)',
-                          }}
+                  {/* Confidence track with CountUp */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">AI Confidence</span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {confidence === null ? (
+                          '—'
+                        ) : (
+                          <CountUp value={confidence} decimals={2} suffix="%" />
+                        )}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 ease-out"
+                        style={{
+                          width: `${confidence ?? 0}%`,
+                          backgroundColor: lowConfidence
+                            ? 'var(--destructive)'
+                            : 'var(--chart-1)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ranked pills */}
+                  <BarPillChart items={pillItems} />
+
+                  {/* Metadata breakdown */}
+                  <div className="rounded-lg border border-border divide-y divide-border/50 text-xs">
+                    <div className="flex items-center justify-between p-2.5">
+                      <span className="text-muted-foreground">Development Stage</span>
+                      <span className="font-medium text-foreground">{stageLabel}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5">
+                      <span className="text-muted-foreground">Status</span>
+                      <span className="font-medium text-foreground">{statusLabel}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5">
+                      <span className="text-muted-foreground">Timestamp</span>
+                      <span className="font-mono text-foreground">{dateLabel}</span>
+                    </div>
+                    {preview && (
+                      <div className="p-2.5 flex items-center justify-between">
+                        <span className="text-muted-foreground">Captured Image</span>
+                        <img
+                          src={preview}
+                          alt="Captured preview"
+                          className="size-10 rounded-md object-cover border border-border"
                         />
                       </div>
-                    </div>
-
-                    {/* Ranked pills */}
-                    <BarPillChart items={pillItems} />
-
-                    {/* Metadata breakdown */}
-                    <div className="rounded-lg border border-border divide-y divide-border/50 text-xs">
-                      <div className="flex items-center justify-between p-2.5">
-                        <span className="text-muted-foreground">Development Stage</span>
-                        <span className="font-medium text-foreground">{stageLabel}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2.5">
-                        <span className="text-muted-foreground">Status</span>
-                        <span className="font-medium text-foreground">{statusLabel}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2.5">
-                        <span className="text-muted-foreground">Timestamp</span>
-                        <span className="font-mono text-foreground">{dateLabel}</span>
-                      </div>
-                      {preview && (
-                        <div className="p-2.5 flex items-center justify-between">
-                          <span className="text-muted-foreground">Captured Image</span>
-                          <img
-                            src={preview}
-                            alt="Captured preview"
-                            className="size-10 rounded-md object-cover border border-border"
-                          />
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </ElectricBorder>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* ---------------- 3. Confidence Donut ---------------- */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-base font-semibold">Scan Confidence</CardTitle>
-              <CardDescription>YOLO inference certainty</CardDescription>
-            </div>
-            <Button as={Link} to="/logs" variant="outline" size="xs">
-              History
-            </Button>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center py-4 space-y-4">
-            <DonutChart
-              value={confidence ?? 0}
-              centerTop={analyzing ? '…' : confLabel}
-              centerBottom="AI Score"
-            />
-            <div className="flex items-center justify-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5 font-medium text-foreground">
-                <span className="size-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
-                Confirmed {confidence === null ? '—' : `${confidence.toFixed(0)}%`}
-              </span>
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <span className="size-2 rounded-full bg-muted" />
-                Gap {confidence === null ? '—' : `${(100 - confidence).toFixed(0)}%`}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="gsap-card">
+          <Card className="flex flex-col justify-between h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold">Scan Confidence</CardTitle>
+                <CardDescription>YOLO inference certainty</CardDescription>
+              </div>
+              <Button as={Link} to="/logs" variant="outline" size="xs">
+                History
+              </Button>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-4 space-y-4">
+              <DonutChart
+                value={confidence ?? 0}
+                centerTop={analyzing ? '…' : confLabel}
+                centerBottom="AI Score"
+              />
+              <div className="flex items-center justify-center gap-4 text-xs">
+                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                  <span className="size-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+                  Confirmed {confidence === null ? '—' : `${confidence.toFixed(0)}%`}
+                </span>
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <span className="size-2 rounded-full bg-muted" />
+                  Gap {confidence === null ? '—' : `${(100 - confidence).toFixed(0)}%`}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* ---------------- 4. Model Status ---------------- */}
-        <ElectricBorder mode="always">
+        <div className="gsap-card">
           <Card className="flex flex-col justify-between h-full">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">AI Model Status</CardTitle>
@@ -548,80 +614,88 @@ export default function Dashboard() {
                 >
                   <span
                     className={`size-2 rounded-full ${
-                      modelReady ? 'bg-emerald-500' : 'bg-muted-foreground'
+                      modelReady ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'
                     }`}
                   />
                   {modelStatus == null ? 'Checking…' : modelReady ? 'Ready' : 'Not ready'}
                 </Badge>
               </div>
-              <BotEgg />
+              <BotEgg className="hover:scale-105 transition-transform duration-300" />
             </CardContent>
           </Card>
-        </ElectricBorder>
+        </div>
 
         {/* ---------------- 5. Scan Summary & CTA ---------------- */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-base font-semibold">Session Summary</CardTitle>
-              <CardDescription>{todayLabel}</CardDescription>
-            </div>
-            <Badge variant="outline" className="font-mono text-xs">
-              {cameraKind}
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4 py-2">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
-                  Day
-                </span>
-                <span className="text-lg font-bold text-foreground">
-                  {result?.predicted_day?.replace(/^Day\s*/i, '') || '—'}
-                </span>
+        <div className="gsap-card">
+          <Card className="flex flex-col justify-between h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold">Session Summary</CardTitle>
+                <CardDescription>{todayLabel}</CardDescription>
               </div>
-              <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
-                  Stage
-                </span>
-                <span className="text-lg font-bold text-foreground truncate block">
-                  {result?.stage ? result.stage.split(' ')[0] : '—'}
-                </span>
+              <Badge variant="outline" className="font-mono text-xs">
+                {cameraKind}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-4 py-2">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                  <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                    Day
+                  </span>
+                  <span className="text-lg font-bold text-foreground">
+                    {result?.predicted_day?.replace(/^Day\s*/i, '') || '—'}
+                  </span>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                  <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                    Stage
+                  </span>
+                  <span className="text-lg font-bold text-foreground truncate block">
+                    {result?.stage ? result.stage.split(' ')[0] : '—'}
+                  </span>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                  <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                    Conf
+                  </span>
+                  <span className="text-lg font-bold text-foreground">
+                    {confidence === null ? (
+                      '—'
+                    ) : (
+                      <CountUp value={confidence} decimals={0} suffix="%" />
+                    )}
+                  </span>
+                </div>
               </div>
-              <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
-                  Conf
-                </span>
-                <span className="text-lg font-bold text-foreground">{confLabel}</span>
-              </div>
-            </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {showWarning
-                ? lowConfidence
-                  ? 'Low confidence — recapture under better lighting.'
-                  : warnings.join(' ')
-                : result
-                  ? 'Prediction stored automatically under its incubation day.'
-                  : 'Capture or candle an egg to record this session.'}
-            </p>
-          </CardContent>
-          <CardFooter className="pt-0 flex gap-2">
-            <Button as={Link} to="/logs" variant="outline" size="sm" className="w-full gap-1.5">
-              <FileText className="size-3.5" /> Logs
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              className="w-full gap-1.5"
-              onClick={() => {
-                document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth' })
-              }}
-            >
-              Start New <ArrowUpRight className="size-3.5" />
-            </Button>
-          </CardFooter>
-        </Card>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {showWarning
+                  ? lowConfidence
+                    ? 'Low confidence — recapture under better lighting.'
+                    : warnings.join(' ')
+                  : result
+                    ? 'Prediction stored automatically under its incubation day.'
+                    : 'Capture or candle an egg to record this session.'}
+              </p>
+            </CardContent>
+            <CardFooter className="pt-0 flex gap-2">
+              <Button as={Link} to="/logs" variant="outline" size="sm" className="w-full gap-1.5 hover:-translate-y-0.5 active:scale-95 transition-all">
+                <FileText className="size-3.5" /> Logs
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full gap-1.5 hover:-translate-y-0.5 active:scale-95 transition-all"
+                onClick={() => {
+                  document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                Start New <ArrowUpRight className="size-3.5" />
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     </div>
   )

@@ -9,6 +9,8 @@ import {
   RefreshCw,
   RotateCcw,
 } from 'lucide-react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 
 import { api } from '../lib/api'
 import ImageModal from './ImageModal'
@@ -22,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from './ui/Card'
+import { CountUp } from './ui/CountUp'
 
 const DAYS = Array.from({ length: 21 }, (_, index) => `Day ${index + 1}`)
 const PER_PAGE = 10
@@ -32,6 +35,7 @@ function confidenceText(value) {
 
 export default function ScansBrowser({ mode }) {
   const isArchived = mode === 'archives'
+  const browserRef = React.useRef(null)
 
   const [day, setDay] = React.useState('')
   const [date, setDate] = React.useState('')
@@ -44,6 +48,37 @@ export default function ScansBrowser({ mode }) {
   const [error, setError] = React.useState('')
   const [modalItem, setModalItem] = React.useState(null)
   const [busyId, setBusyId] = React.useState(null)
+
+  // GSAP entrance for the browser container and stat chips
+  useGSAP(
+    () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      gsap.from('.gsap-stat-chip', {
+        opacity: 0,
+        y: 12,
+        duration: 0.4,
+        stagger: 0.05,
+        ease: 'power2.out',
+      })
+    },
+    { scope: browserRef },
+  )
+
+  // Staggered row appearance on data change
+  useGSAP(
+    () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      if (!data?.logs?.length) return
+      gsap.from('.gsap-table-row', {
+        opacity: 0,
+        x: -8,
+        duration: 0.35,
+        stagger: 0.04,
+        ease: 'power1.out',
+      })
+    },
+    { dependencies: [data], scope: browserRef },
+  )
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -130,7 +165,7 @@ export default function ScansBrowser({ mode }) {
   })()
 
   return (
-    <Card className="flex flex-col gap-6">
+    <Card ref={browserRef} className="flex flex-col gap-6">
       {/* Header and counter badge */}
       <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-0">
         <div>
@@ -144,30 +179,34 @@ export default function ScansBrowser({ mode }) {
           </CardDescription>
         </div>
         <Badge variant="outline" className="self-start sm:self-center font-mono">
-          {total} total records
+          <CountUp value={total} decimals={0} suffix=" total records" />
         </Badge>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* KPI Strip */}
+        {/* KPI Strip with CountUp */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-lg bg-muted/50 p-3 border border-border/50">
+          <div className="gsap-stat-chip rounded-lg bg-muted/50 p-3 border border-border/50">
             <span className="text-[11px] font-medium text-muted-foreground uppercase">
               Total Records
             </span>
             <span className="text-xl font-bold text-foreground block mt-0.5">
-              {total}
+              <CountUp value={total} decimals={0} />
             </span>
           </div>
-          <div className="rounded-lg bg-muted/50 p-3 border border-border/50">
+          <div className="gsap-stat-chip rounded-lg bg-muted/50 p-3 border border-border/50">
             <span className="text-[11px] font-medium text-muted-foreground uppercase">
               Avg Confidence
             </span>
             <span className="text-xl font-bold text-foreground block mt-0.5">
-              {avgConf === null ? '—' : `${avgConf.toFixed(1)}%`}
+              {avgConf === null ? (
+                '—'
+              ) : (
+                <CountUp value={avgConf} decimals={1} suffix="%" />
+              )}
             </span>
           </div>
-          <div className="rounded-lg bg-muted/50 p-3 border border-border/50">
+          <div className="gsap-stat-chip rounded-lg bg-muted/50 p-3 border border-border/50">
             <span className="text-[11px] font-medium text-muted-foreground uppercase">
               Dominant Day
             </span>
@@ -175,7 +214,7 @@ export default function ScansBrowser({ mode }) {
               {topDay}
             </span>
           </div>
-          <div className="rounded-lg bg-muted/50 p-3 border border-border/50">
+          <div className="gsap-stat-chip rounded-lg bg-muted/50 p-3 border border-border/50">
             <span className="text-[11px] font-medium text-muted-foreground uppercase">
               Page Range
             </span>
@@ -213,10 +252,20 @@ export default function ScansBrowser({ mode }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="default" size="sm" onClick={applyFilters}>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={applyFilters}
+              className="hover:-translate-y-0.5 active:scale-95 transition-all"
+            >
               Apply Filters
             </Button>
-            <Button variant="outline" size="sm" onClick={resetFilters}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetFilters}
+              className="hover:-translate-y-0.5 active:scale-95 transition-all"
+            >
               Reset
             </Button>
           </div>
@@ -231,12 +280,12 @@ export default function ScansBrowser({ mode }) {
         {/* Records Table */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <RefreshCw className="size-6 animate-spin mb-2 opacity-60" />
+            <RefreshCw className="size-6 animate-spin mb-2 opacity-60 text-primary" />
             <p className="text-sm">Fetching scans…</p>
           </div>
         ) : logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-            <Archive className="size-8 mb-2 opacity-40" />
+            <Archive className="size-8 mb-2 opacity-40 animate-pulse" />
             <p className="text-sm font-medium text-foreground">
               {error
                 ? 'Could not fetch records.'
@@ -265,11 +314,14 @@ export default function ScansBrowser({ mode }) {
               </thead>
               <tbody className="divide-y divide-border/60">
                 {logs.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                  <tr
+                    key={item.id}
+                    className="gsap-table-row hover:bg-muted/30 transition-colors"
+                  >
                     <td className="py-3 px-4 font-mono text-xs">{item.id}</td>
                     <td className="py-3 px-4">
                       <img
-                        className="size-11 rounded-md object-cover border border-border cursor-pointer hover:opacity-80 transition-opacity"
+                        className="size-11 rounded-md object-cover border border-border cursor-pointer hover:opacity-80 hover:scale-105 transition-all"
                         src={item.image_url}
                         alt={`Egg ${item.id}`}
                         loading="lazy"
@@ -298,7 +350,7 @@ export default function ScansBrowser({ mode }) {
                           variant="outline"
                           size="xs"
                           onClick={() => setModalItem(item)}
-                          className="gap-1"
+                          className="gap-1 hover:-translate-y-0.5 active:scale-95 transition-all"
                         >
                           <Eye className="size-3" /> View
                         </Button>
@@ -307,7 +359,7 @@ export default function ScansBrowser({ mode }) {
                           size="xs"
                           disabled={busyId === item.id}
                           onClick={() => handleAction(item)}
-                          className="gap-1"
+                          className="gap-1 hover:-translate-y-0.5 active:scale-95 transition-all"
                         >
                           {busyId === item.id ? (
                             '…'
@@ -344,7 +396,7 @@ export default function ScansBrowser({ mode }) {
                 size="sm"
                 disabled={currentPage <= 1}
                 onClick={() => setPage(Math.max(1, currentPage - 1))}
-                className="gap-1"
+                className="gap-1 hover:-translate-y-0.5 active:scale-95 transition-all"
               >
                 <ChevronLeft className="size-3.5" /> Previous
               </Button>
@@ -353,7 +405,7 @@ export default function ScansBrowser({ mode }) {
                 size="sm"
                 disabled={currentPage >= pages}
                 onClick={() => setPage(currentPage + 1)}
-                className="gap-1"
+                className="gap-1 hover:-translate-y-0.5 active:scale-95 transition-all"
               >
                 Next <ChevronRight className="size-3.5" />
               </Button>

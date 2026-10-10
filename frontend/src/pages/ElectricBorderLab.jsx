@@ -28,13 +28,10 @@ function Row({ label, children, value }) {
 }
 
 export default function ElectricBorderLab() {
-  const [mode, setMode] = React.useState('always')
-  const [variant, setVariant] = React.useState('mint')
   const [color, setColor] = React.useState('#3b82f6')
-  const [speed, setSpeed] = React.useState(4.5)
-  const [thickness, setThickness] = React.useState(1.5)
-  const [glow, setGlow] = React.useState(12)
-  const [radius, setRadius] = React.useState(24)
+  const [speed, setSpeed] = React.useState(1.4)
+  const [chaos, setChaos] = React.useState(0.14)
+  const [radius, setRadius] = React.useState(16)
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,42 +42,37 @@ export default function ElectricBorderLab() {
               Electric Border FX Lab
             </h1>
             <Badge variant="outline" className="gap-1 font-mono text-xs">
-              <Sparkles className="size-3 text-primary" /> v2
+              <Sparkles className="size-3 text-primary animate-pulse" /> React Bits
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Dynamic SVG turbulence and border animation playground in isolation.
+            React Bits canvas noise displacement energy border in isolation.
           </p>
         </div>
-        <Button as={Link} to="/" variant="outline" size="sm" className="gap-1.5 self-start">
+        <Button as={Link} to="/" variant="outline" size="sm" className="gap-1.5 self-start hover:-translate-y-0.5 active:scale-95 transition-all">
           <ArrowLeft className="size-3.5" /> Back to Scanner
         </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Live Preview Card */}
-        <div className="flex flex-col justify-center">
+        <div className="flex flex-col justify-center p-4">
           <ElectricBorder
-            mode={mode}
-            variant={variant}
             color={color}
-            speed={`${speed}s`}
-            thickness={`${thickness}px`}
-            glow={`${glow}px`}
-            radius={`${radius}px`}
+            speed={speed}
+            chaos={chaos}
+            borderRadius={radius}
             className="w-full"
           >
-            <Card className="p-8 text-center bg-card">
+            <Card className="p-8 text-center bg-card shadow-sm">
               <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                Electric Border &middot; Live Demo
+                React Bits Electric Border &middot; Live Demo
               </span>
               <div className="text-4xl font-extrabold text-foreground tracking-tight my-3">
                 +99.4%
               </div>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                {mode === 'hover'
-                  ? 'Hover over this card to trigger the electric flow effect.'
-                  : 'Currently rendering in continuous active mode.'}
+                Real-time canvas fractal noise arc simulation with reactive glow.
               </p>
             </Card>
           </ElectricBorder>
@@ -91,32 +83,10 @@ export default function ElectricBorderLab() {
           <CardHeader>
             <CardTitle>Tunables & Parameters</CardTitle>
             <CardDescription>
-              Adjust CSS custom variables live on the preview component.
+              Adjust noise frequency, speed, and arc displacement.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
-            <Row label="Mode" value={mode}>
-              <select
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-                className="text-xs h-8 rounded-md border border-border bg-background px-2 text-foreground"
-              >
-                <option value="always">always</option>
-                <option value="hover">hover / focus</option>
-              </select>
-            </Row>
-
-            <Row label="Variant" value={variant}>
-              <select
-                value={variant}
-                onChange={(e) => setVariant(e.target.value)}
-                className="text-xs h-8 rounded-md border border-border bg-background px-2 text-foreground"
-              >
-                <option value="mint">mint</option>
-                <option value="light">light</option>
-              </select>
-            </Row>
-
             <Row label="Border Color" value={color}>
               <input
                 type="color"
@@ -126,38 +96,26 @@ export default function ElectricBorderLab() {
               />
             </Row>
 
-            <Row label="Speed" value={`${speed.toFixed(1)}s`}>
+            <Row label="Speed" value={`${speed.toFixed(1)}x`}>
               <input
                 type="range"
-                min="1"
-                max="12"
-                step="0.5"
+                min="0.2"
+                max="3.0"
+                step="0.1"
                 value={speed}
                 onChange={(e) => setSpeed(Number(e.target.value))}
                 className="w-32 cursor-pointer"
               />
             </Row>
 
-            <Row label="Thickness" value={`${thickness.toFixed(1)}px`}>
+            <Row label="Chaos (Displacement)" value={chaos.toFixed(2)}>
               <input
                 type="range"
-                min="1"
-                max="4"
-                step="0.5"
-                value={thickness}
-                onChange={(e) => setThickness(Number(e.target.value))}
-                className="w-32 cursor-pointer"
-              />
-            </Row>
-
-            <Row label="Glow Radius" value={`${glow.toFixed(0)}px`}>
-              <input
-                type="range"
-                min="0"
-                max="24"
-                step="1"
-                value={glow}
-                onChange={(e) => setGlow(Number(e.target.value))}
+                min="0.02"
+                max="0.35"
+                step="0.01"
+                value={chaos}
+                onChange={(e) => setChaos(Number(e.target.value))}
                 className="w-32 cursor-pointer"
               />
             </Row>
@@ -165,8 +123,8 @@ export default function ElectricBorderLab() {
             <Row label="Border Radius" value={`${radius.toFixed(0)}px`}>
               <input
                 type="range"
-                min="10"
-                max="32"
+                min="4"
+                max="28"
                 step="1"
                 value={radius}
                 onChange={(e) => setRadius(Number(e.target.value))}

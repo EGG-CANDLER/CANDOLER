@@ -1,4 +1,6 @@
 import * as React from 'react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 
 function clampPct(value) {
   const n = Number(value)
@@ -24,8 +26,12 @@ function smoothPath(pts) {
   return d
 }
 
-// Area/Line chart using chart color tokens (var(--chart-1))
+// Area/Line chart using chart color tokens and GSAP stroke draw-in animation
 export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 120, format }) {
+  const containerRef = React.useRef(null)
+  const linePathRef = React.useRef(null)
+  const areaPathRef = React.useRef(null)
+  const dotsRef = React.useRef([])
   const gid = React.useId().replace(/[^a-zA-Z0-9]/g, '')
   const [hover, setHover] = React.useState(-1)
 
@@ -46,8 +52,48 @@ export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 120, f
     : ''
   const show = typeof format === 'function' ? format : (v) => `${Number(v).toFixed(2)}%`
 
+  // GSAP Draw-in animation for line and area fill
+  useGSAP(
+    () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      if (!linePathRef.current) return
+
+      try {
+        const length = linePathRef.current.getTotalLength() || 400
+        gsap.fromTo(
+          linePathRef.current,
+          { strokeDasharray: length, strokeDashoffset: length },
+          { strokeDashoffset: 0, duration: 0.55, ease: 'power2.out' },
+        )
+      } catch {
+        /* fallback */
+      }
+
+      if (areaPathRef.current) {
+        gsap.fromTo(
+          areaPathRef.current,
+          { opacity: 0 },
+          { opacity: 1, duration: 0.45, delay: 0.1, ease: 'power1.out' },
+        )
+      }
+
+      if (dotsRef.current.length) {
+        gsap.fromTo(
+          dotsRef.current,
+          { scale: 0, transformOrigin: 'center' },
+          { scale: 1, duration: 0.35, delay: 0.2, stagger: 0.05, ease: 'back.out(1.5)' },
+        )
+      }
+    },
+    { dependencies: [data], scope: containerRef },
+  )
+
   return (
-    <div className="relative w-full overflow-hidden select-none" onMouseLeave={() => setHover(-1)}>
+    <div
+      ref={containerRef}
+      className="relative w-full overflow-hidden select-none"
+      onMouseLeave={() => setHover(-1)}
+    >
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
@@ -85,10 +131,11 @@ export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 120, f
         ))}
 
         {/* Filled area */}
-        <path d={area} fill={`url(#areaGrad${gid})`} />
+        <path ref={areaPathRef} d={area} fill={`url(#areaGrad${gid})`} />
 
         {/* Stroke line */}
         <path
+          ref={linePathRef}
           d={line}
           fill="none"
           stroke={`url(#lineGrad${gid})`}
@@ -113,6 +160,7 @@ export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 120, f
               tabIndex={0}
             />
             <circle
+              ref={(el) => (dotsRef.current[i] = el)}
               cx={p.x}
               cy={p.y}
               r={hover === i ? 5 : 3}
@@ -139,7 +187,7 @@ export function AreaChart({ data = [0, 0, 0, 0, 0], labels = [], height = 120, f
   )
 }
 
-// Donut chart using chart token (--chart-2)
+// Donut chart using chart token and GSAP draw-in animation
 export function DonutChart({
   value = 0,
   size = 140,
@@ -147,24 +195,40 @@ export function DonutChart({
   centerTop = '',
   centerBottom = '',
 }) {
+  const circleRef = React.useRef(null)
+  const containerRef = React.useRef(null)
   const pct = clampPct(value)
   const gid = React.useId().replace(/[^a-zA-Z0-9]/g, '')
-  const [drawn, setDrawn] = React.useState(false)
-
-  React.useEffect(() => {
-    setDrawn(false)
-    const frame = requestAnimationFrame(() =>
-      requestAnimationFrame(() => setDrawn(true)),
-    )
-    return () => cancelAnimationFrame(frame)
-  }, [pct])
 
   const R = 48
   const CIRC = 2 * Math.PI * R
-  const shown = drawn ? pct : 0
+
+  useGSAP(
+    () => {
+      if (!circleRef.current) return
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.set(circleRef.current, {
+          strokeDashoffset: CIRC * (1 - pct / 100),
+        })
+        return
+      }
+
+      gsap.fromTo(
+        circleRef.current,
+        { strokeDashoffset: CIRC },
+        {
+          strokeDashoffset: CIRC * (1 - pct / 100),
+          duration: 0.6,
+          ease: 'power2.out',
+        },
+      )
+    },
+    { dependencies: [pct], scope: containerRef },
+  )
 
   return (
     <div
+      ref={containerRef}
       className="relative flex items-center justify-center select-none"
       style={{ width: size, height: size }}
       role="img"
@@ -192,6 +256,7 @@ export function DonutChart({
         />
         {/* Filled segment */}
         <circle
+          ref={circleRef}
           cx="60"
           cy="60"
           r={R}
@@ -199,9 +264,8 @@ export function DonutChart({
           stroke={`url(#donutGrad${gid})`}
           strokeWidth={thickness}
           strokeDasharray={`${CIRC}`}
-          strokeDashoffset={`${CIRC * (1 - shown / 100)}`}
+          strokeDashoffset={`${CIRC}`}
           strokeLinecap="round"
-          className="transition-all duration-700 ease-out"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
@@ -214,7 +278,7 @@ export function DonutChart({
   )
 }
 
-// Vertical pill bar chart using all 5 chart tokens (--chart-1 to --chart-5)
+// Vertical pill bar chart using all 5 chart tokens and GSAP stagger bars
 const CHART_TOKENS = [
   'var(--chart-1)',
   'var(--chart-2)',
@@ -224,20 +288,24 @@ const CHART_TOKENS = [
 ]
 
 export function BarPillChart({ items = [] }) {
-  const [grown, setGrown] = React.useState(false)
-
-  React.useEffect(() => {
-    setGrown(false)
-    const frame = requestAnimationFrame(() =>
-      requestAnimationFrame(() => setGrown(true)),
-    )
-    return () => cancelAnimationFrame(frame)
-  }, [JSON.stringify(items.map((i) => i.value))])
-
+  const containerRef = React.useRef(null)
   const max = Math.max(...items.map((i) => Number(i.value) || 0), 1)
+
+  useGSAP(
+    () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      gsap.fromTo(
+        '.gsap-bar-fill',
+        { scaleY: 0, transformOrigin: 'bottom' },
+        { scaleY: 1, duration: 0.5, stagger: 0.05, ease: 'back.out(1.2)' },
+      )
+    },
+    { dependencies: [JSON.stringify(items.map((i) => i.value))], scope: containerRef },
+  )
 
   return (
     <div
+      ref={containerRef}
       className="grid grid-cols-5 gap-3 w-full py-2 select-none"
       role="img"
       aria-label="Top predictions chart"
@@ -253,9 +321,9 @@ export function BarPillChart({ items = [] }) {
           >
             <div className="relative h-28 w-full max-w-[2.25rem] rounded-full bg-muted p-1 flex items-end justify-center overflow-hidden border border-border/50">
               <div
-                className="w-full rounded-full transition-all duration-500 ease-out"
+                className="gsap-bar-fill w-full rounded-full transition-all duration-300"
                 style={{
-                  height: grown ? `${Math.max(10, pct)}%` : '0%',
+                  height: `${Math.max(10, pct)}%`,
                   backgroundColor: color,
                   boxShadow: i === 0 ? `0 0 12px ${color}` : undefined,
                 }}
@@ -271,10 +339,24 @@ export function BarPillChart({ items = [] }) {
   )
 }
 
-// Full session / history report graph using chart color tokens
+// Full session / history report graph using chart color tokens and GSAP draw
 export function ReportGraph({ data = [] }) {
+  const barRef = React.useRef(null)
+
+  useGSAP(
+    () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      gsap.fromTo(
+        '.gsap-report-segment',
+        { scaleX: 0, transformOrigin: 'left' },
+        { scaleX: 1, duration: 0.45, stagger: 0.06, ease: 'power2.out' },
+      )
+    },
+    { scope: barRef },
+  )
+
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div ref={barRef} className="flex flex-col gap-3 w-full">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>Incubation timeline distribution</span>
         <div className="flex items-center gap-3">
@@ -293,10 +375,22 @@ export function ReportGraph({ data = [] }) {
         </div>
       </div>
       <div className="h-2 w-full rounded-full bg-muted overflow-hidden flex">
-        <div style={{ width: '45%', backgroundColor: 'var(--chart-1)' }} />
-        <div style={{ width: '30%', backgroundColor: 'var(--chart-2)' }} />
-        <div style={{ width: '15%', backgroundColor: 'var(--chart-3)' }} />
-        <div style={{ width: '10%', backgroundColor: 'var(--chart-4)' }} />
+        <div
+          className="gsap-report-segment"
+          style={{ width: '45%', backgroundColor: 'var(--chart-1)' }}
+        />
+        <div
+          className="gsap-report-segment"
+          style={{ width: '30%', backgroundColor: 'var(--chart-2)' }}
+        />
+        <div
+          className="gsap-report-segment"
+          style={{ width: '15%', backgroundColor: 'var(--chart-3)' }}
+        />
+        <div
+          className="gsap-report-segment"
+          style={{ width: '10%', backgroundColor: 'var(--chart-4)' }}
+        />
       </div>
     </div>
   )
