@@ -1,21 +1,30 @@
+import * as React from 'react'
 import { Link } from 'react-router-dom'
 
-// PillButton — rounded pill CTA used across the dashboard.
-// variant: primary (mint) | dark | ghost | danger · size: '' | 'sm'
+import { cn } from '../../lib/utils'
+import { buttonVariants } from './button'
+
+// PillButton — fully pill-shaped button (rounded-4xl) adhering to design system tokens
 export default function PillButton({
   as,
   to,
   href,
-  variant = 'dark',
-  size = '',
+  variant = 'default',
+  size = 'default',
   className = '',
   children,
   ...rest
 }) {
-  const cls =
-    `pill-btn pill-${variant}` +
-    (size ? ` pill-${size}` : '') +
-    (className ? ` ${className}` : '')
+  let mappedVariant = variant
+  if (variant === 'primary') mappedVariant = 'default'
+  else if (variant === 'dark') mappedVariant = 'secondary'
+  else if (variant === 'danger') mappedVariant = 'destructive'
+
+  const cls = cn(
+    buttonVariants({ variant: mappedVariant, size }),
+    'rounded-4xl font-medium cursor-pointer',
+    className,
+  )
 
   if (to) {
     return (

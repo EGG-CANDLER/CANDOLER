@@ -1,37 +1,60 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import * as React from 'react'
+import { Link } from 'react-router-dom'
+import {
+  AlertCircle,
+  ArrowUpRight,
+  Camera,
+  CheckCircle2,
+  FileText,
+  HelpCircle,
+  RefreshCw,
+  Sparkles,
+  Upload,
+  VideoOff,
+} from 'lucide-react'
 
 import { api } from '../lib/api'
-import { AreaChart, BarPillChart, DonutChart } from '../components/ui/charts.jsx'
-import { BotEgg } from '../components/ui/Decor.jsx'
-import ElectricBorder from '../components/ui/ElectricBorder.jsx'
-import PillButton from '../components/ui/PillButton.jsx'
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
+import { Badge } from '../components/ui/badge'
+import { Button } from '../components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/Card'
+import { AreaChart, BarPillChart, DonutChart } from '../components/ui/charts'
+import { BotEgg } from '../components/ui/Decor'
+import ElectricBorder from '../components/ui/ElectricBorder'
 
 const IDEAL = { width: { ideal: 1280 }, height: { ideal: 720 } }
 
 export default function Dashboard() {
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
+  const videoRef = React.useRef(null)
+  const streamRef = React.useRef(null)
 
-  const [stream, setStream] = useState(null)
-  const [cameras, setCameras] = useState([])
-  const [deviceId, setDeviceId] = useState('')
-  const [facingMode, setFacingMode] = useState('environment')
-  const [cameraStatus, setCameraStatus] = useState('Camera off')
-  const [cameraError, setCameraError] = useState('')
+  const [stream, setStream] = React.useState(null)
+  const [cameras, setCameras] = React.useState([])
+  const [deviceId, setDeviceId] = React.useState('')
+  const [facingMode, setFacingMode] = React.useState('environment')
+  const [cameraStatus, setCameraStatus] = React.useState('Camera off')
+  const [cameraError, setCameraError] = React.useState('')
 
-  const [modelStatus, setModelStatus] = useState(null)
+  const [modelStatus, setModelStatus] = React.useState(null)
 
-  const [preview, setPreview] = useState('')
-  const [result, setResult] = useState(null)
-  const [analyzing, setAnalyzing] = useState(false)
-  const [error, setError] = useState('')
+  const [preview, setPreview] = React.useState('')
+  const [result, setResult] = React.useState(null)
+  const [analyzing, setAnalyzing] = React.useState(false)
+  const [error, setError] = React.useState('')
 
   // Model readiness banner.
-  useEffect(() => {
+  React.useEffect(() => {
     api.status().then(setModelStatus).catch(() => {})
   }, [])
 
-  const refreshCameras = useCallback(async () => {
+  const refreshCameras = React.useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return []
     try {
       const devices = await navigator.mediaDevices.enumerateDevices()
@@ -43,21 +66,21 @@ export default function Dashboard() {
     }
   }, [])
 
-  const stopTracks = useCallback(() => {
+  const stopTracks = React.useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
   }, [])
 
-  const stopCamera = useCallback(() => {
+  const stopCamera = React.useCallback(() => {
     stopTracks()
     setStream(null)
     if (videoRef.current) videoRef.current.srcObject = null
     setCameraStatus('Camera off')
   }, [stopTracks])
 
-  const startCamera = useCallback(
+  const startCamera = React.useCallback(
     async (id, facing) => {
       setCameraError('')
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -94,7 +117,7 @@ export default function Dashboard() {
   )
 
   // Attach the live stream to the <video> element.
-  useEffect(() => {
+  React.useEffect(() => {
     const video = videoRef.current
     if (video && stream) {
       video.srcObject = stream
@@ -103,7 +126,7 @@ export default function Dashboard() {
   }, [stream])
 
   // Release the camera when leaving the page.
-  useEffect(() => () => stopTracks(), [stopTracks])
+  React.useEffect(() => () => stopTracks(), [stopTracks])
 
   async function handleStart() {
     await startCamera(deviceId || '', facingMode)
@@ -111,7 +134,7 @@ export default function Dashboard() {
   }
 
   async function handleSwitch() {
-    const vids = cameras.length ? cameras : (await refreshCameras())
+    const vids = cameras.length ? cameras : await refreshCameras()
     if (vids.length > 1) {
       const index = vids.findIndex((c) => c.deviceId === deviceId)
       const next = vids[(index + 1 + vids.length) % vids.length]
@@ -171,18 +194,17 @@ export default function Dashboard() {
   const warnings = (result && result.warnings) || []
   const showWarning = Boolean(result) && (lowConfidence || warnings.length > 0)
 
-  // ---- Derived display values (data unchanged, presentation only) ----
+  // Derived display values
   const confidence =
     result && typeof result.confidence === 'number' ? result.confidence : null
   const confLabel = confidence === null ? '—' : `${confidence.toFixed(0)}%`
-  const dayLabel =
-    analyzing
-      ? 'Analyzing…'
-      : result
-        ? lowConfidence
-          ? 'LOW CONFIDENCE'
-          : result.predicted_day || '—'
-        : '—'
+  const dayLabel = analyzing
+    ? 'Analyzing…'
+    : result
+      ? lowConfidence
+        ? 'LOW CONFIDENCE'
+        : result.predicted_day || '—'
+      : '—'
   const stageLabel = result
     ? result.stage || (lowConfidence ? 'Not assigned' : '—')
     : '—'
@@ -191,7 +213,7 @@ export default function Dashboard() {
     ? [result.date_display, result.time_display].filter(Boolean).join(' — ')
     : '—'
 
-  // Confidence sparkline from the ranked predictions (newest shape, same data).
+  // Ranked predictions
   const topFive = (result?.top_predictions || []).slice(0, 5)
   const sparkValues = topFive.length
     ? topFive.map((item) => Number(item.confidence) || 0)
@@ -221,323 +243,386 @@ export default function Dashboard() {
     cameras.length > 1 ? `${cameras.length} cams` : stream ? 'Live' : 'Off'
 
   return (
-      <>
-        {modelStatus && !modelStatus.model_ready && (
-          <div className="banner banner-warn" role="alert">
-            AI model not trained yet — predictions are unavailable. Train the
-            model first.
-          </div>
-        )}
+    <div className="flex flex-col gap-6">
+      {/* Model readiness alert if unavailable */}
+      {modelStatus && !modelStatus.model_ready && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>AI Model Unavailable</AlertTitle>
+          <AlertDescription>
+            AI model not trained yet — predictions are unavailable. Train the model first.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <div className="bento">
-          {/* ---------------- Camera ---------------- */}
+      {/* Main Bento Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* ---------------- 1. Live Camera Scanner ---------------- */}
+        <div className="md:col-span-2 lg:col-span-2">
           <ElectricBorder mode="hover">
-            <section className="card" id="scanner" aria-label="Live camera">
-              <div className="card-head">
-                <div className="card-head-text">
-                  <h2>Live camera</h2>
-                  <p className="muted">Candle the egg, capture, analyze</p>
+            <Card id="scanner" className="h-full flex flex-col justify-between">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Camera className="size-4 text-primary" /> Live Camera
+                  </CardTitle>
+                  <CardDescription>Candle the egg, capture, and run YOLO inference</CardDescription>
                 </div>
-                <span className={`count-pill${stream ? '' : ' off'}`}>
-                  <span className={`dot${stream ? ' on' : ''}`} aria-hidden="true" />
+                <Badge
+                  variant={stream ? 'default' : 'secondary'}
+                  className="gap-1.5 text-xs py-1"
+                >
+                  <span
+                    className={`size-2 rounded-full ${
+                      stream ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'
+                    }`}
+                  />
                   {cameraStatus}
-                </span>
-              </div>
+                </Badge>
+              </CardHeader>
 
-              <div className="camera">
-                <video ref={videoRef} autoPlay playsInline muted />
-                {!stream && (
-                  <div className="placeholder">
-                    Start the camera, or upload a photo of the candled egg.
-                  </div>
-                )}
-              </div>
-
-              {cameraError && (
-                <div className="alert alert-error" role="alert">
-                  {cameraError}
+              <CardContent className="space-y-4">
+                {/* Video container */}
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/90 flex items-center justify-center border border-border">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`h-full w-full object-cover ${stream ? 'block' : 'hidden'}`}
+                  />
+                  {!stream && (
+                    <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                      <VideoOff className="size-10 mb-2 opacity-50" />
+                      <p className="text-sm font-medium text-foreground">Camera is offline</p>
+                      <p className="text-xs text-muted-foreground max-w-sm mt-1">
+                        Start the live feed or upload a candling photograph to begin.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              <label className="camera-field">
-                Select camera
-                <select value={deviceId} onChange={handleSelectCamera}>
-                  <option value="">
-                    {cameras.length ? 'Default camera' : 'No camera detected'}
-                  </option>
-                  {cameras.map((cam, index) => (
-                    <option key={cam.deviceId || index} value={cam.deviceId}>
-                      {cam.label || `Camera ${index + 1}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="controls">
-                {!stream ? (
-                  <PillButton variant="primary" onClick={handleStart}>
-                    Start camera
-                  </PillButton>
-                ) : (
-                  <PillButton variant="danger" onClick={stopCamera}>
-                    Stop
-                  </PillButton>
+                {cameraError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="size-4" />
+                    <AlertDescription>{cameraError}</AlertDescription>
+                  </Alert>
                 )}
 
-                <PillButton
-                  variant="dark"
-                  onClick={handleSwitch}
-                  disabled={!stream}
-                  title="Switch front/back camera"
-                >
-                  ⟳ Switch
-                </PillButton>
-
-                <PillButton
-                  variant="primary"
-                  onClick={handleCapture}
-                  disabled={!stream || analyzing}
-                >
-                  {analyzing ? 'Analyzing…' : 'Capture & analyze'}
-                </PillButton>
-
-                <PillButton as="label" variant="dark">
-                  Upload photo
-                  <input type="file" accept="image/*" onChange={handleFile} hidden />
-                </PillButton>
-              </div>
-
-              <p className="note muted">
-                Confidence distribution across the ranked predictions:
-              </p>
-              <AreaChart data={sparkValues} labels={sparkLabels} height={104} />
-            </section>
-          </ElectricBorder>
-
-          {/* ---------------- Result ---------------- */}
-          <ElectricBorder mode="hover">
-            <section className="card" aria-label="AI analysis result">
-              <div className="card-head">
-                <div className="card-head-text">
-                  <h2>AI analysis result</h2>
-                  <p className="muted">
-                    {result ? statusLabel : 'Capture or upload to see the prediction'}
-                  </p>
-                </div>
-                <span className="count-pill">Detail</span>
-              </div>
-
-              {error && (
-                <div className="alert alert-error" role="alert">
-                  {error}
-                </div>
-              )}
-
-              {showWarning && (
-                <div className="banner banner-warn" role="alert">
-                  {lowConfidence
-                    ? result?.status ||
-                      'Low confidence — please recapture under better candling conditions.'
-                    : warnings.join(' ')}
-                </div>
-              )}
-
-              {!result && !preview ? (
-                <div className="state state-empty">
-                  <p>Capture or upload an egg image to see the prediction.</p>
-                </div>
-              ) : (
-                <>
-                  <div className={`result-day ${lowConfidence ? 'low' : ''}`}>
-                    {dayLabel}
+                {/* Camera selector & action buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1 max-w-xs">
+                    <select
+                      value={deviceId}
+                      onChange={handleSelectCamera}
+                      className="w-full text-xs h-9 rounded-md border border-border bg-background px-3 py-1 text-foreground focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50"
+                    >
+                      <option value="">
+                        {cameras.length ? 'Default camera' : 'No camera detected'}
+                      </option>
+                      {cameras.map((cam, index) => (
+                        <option key={cam.deviceId || index} value={cam.deviceId}>
+                          {cam.label || `Camera ${index + 1}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <p className="confidence-readout">
-                    <span>AI confidence</span>
-                    <span className="confidence-track" aria-hidden="true">
-                      <span
-                        className="confidence-fill"
-                        style={{ width: `${confidence ?? 0}%` }}
-                      />
-                    </span>
-                    <strong>{confLabel === '—' ? '—' : `${confidence.toFixed(2)}%`}</strong>
-                  </p>
 
-                  <BarPillChart items={pillItems} />
-
-                  <div className="result-rows">
-                    <div className="result-row">
-                      <small>Development stage</small>
-                      <strong>{stageLabel}</strong>
-                    </div>
-
-                    <div className="result-row">
-                      <small>Status</small>
-                      <strong>{statusLabel}</strong>
-                    </div>
-
-                    <div className="result-row">
-                      <small>Date &amp; time</small>
-                      <strong>{dateLabel}</strong>
-                    </div>
-
-                    {topFive.length > 0 && (
-                      <div className="result-row">
-                        <small>Top predictions</small>
-                        <ul className="top-list">
-                          {topFive.slice(0, 3).map((item, index) => (
-                            <li key={index}>
-                              {item.day}: {Number(item.confidence).toFixed(2)}%
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!stream ? (
+                      <Button variant="default" size="sm" onClick={handleStart} className="gap-1.5">
+                        <Camera className="size-3.5" /> Start camera
+                      </Button>
+                    ) : (
+                      <Button variant="destructive" size="sm" onClick={stopCamera}>
+                        Stop
+                      </Button>
                     )}
 
-                    {preview && (
-                      <div className="result-row">
-                        <small>Captured image</small>
-                        <img className="result-image" src={preview} alt="Captured egg" />
-                      </div>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSwitch}
+                      disabled={!stream}
+                      title="Switch camera"
+                    >
+                      <RefreshCw className="size-3.5" />
+                    </Button>
+
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleCapture}
+                      disabled={!stream || analyzing}
+                      className="gap-1.5 font-medium"
+                    >
+                      <Sparkles className="size-3.5" />
+                      {analyzing ? 'Analyzing…' : 'Capture & analyze'}
+                    </Button>
+
+                    <label className="inline-flex cursor-pointer">
+                      <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
+                      <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50">
+                        <Upload className="size-3.5" /> Upload
+                      </span>
+                    </label>
                   </div>
-                </>
-              )}
-            </section>
-          </ElectricBorder>
+                </div>
 
-          {/* ---------------- Confidence donut ---------------- */}
-          <ElectricBorder mode="hover">
-            <section className="card" aria-label="Scan confidence">
-              <div className="card-head">
-                <div className="card-head-text">
-                  <h2>Scan confidence</h2>
-                  <p className="muted">How sure the YOLO classifier is</p>
+                {/* Ranked sparkline */}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>Ranked prediction distribution</span>
+                    <span className="font-mono">Top 5 classes</span>
+                  </div>
+                  <AreaChart data={sparkValues} labels={sparkLabels} height={96} />
                 </div>
-                <PillButton variant="dark" size="sm" to="/logs">More</PillButton>
-              </div>
-              <div className="donut-block">
-                <DonutChart
-                  value={confidence ?? 0}
-                  centerTop={analyzing ? '…' : confLabel}
-                  centerBottom="AI score"
-                />
-                <div className="legend">
-                  <span className="legend-mint">
-                    <i aria-hidden="true" />
-                    Confirmed {confidence === null ? '—' : `${confidence.toFixed(0)}%`}
-                  </span>
-                  <span className="legend-paper">
-                    <i aria-hidden="true" />
-                    Gap {confidence === null ? '—' : `${(100 - confidence).toFixed(0)}%`}
-                  </span>
-                </div>
-              </div>
-            </section>
-          </ElectricBorder>
-
-          {/* ---------------- Model status ---------------- */}
-          <ElectricBorder mode="always">
-            <section className="card" aria-label="AI model status">
-              <div className="model-row">
-                <div className="model-copy">
-                  <h2>AI model status</h2>
-                  <p className="muted">
-                    {modelStatus == null
-                      ? 'Checking the Flask backend…'
-                      : modelReady
-                        ? 'YOLO classifier is loaded and ready to candle eggs.'
-                        : 'Model is not ready — predictions are unavailable.'}
-                  </p>
-                  <p className="muted small" style={{ marginTop: 10 }}>
-                    <span className={`count-pill${modelReady ? '' : ' off'}`}>
-                      <span className="dot" aria-hidden="true" />
-                      {modelStatus == null ? 'Checking…' : modelReady ? 'Ready' : 'Not ready'}
-                    </span>
-                  </p>
-                </div>
-                <BotEgg />
-              </div>
-            </section>
-          </ElectricBorder>
-
-          {/* ---------------- Session report ---------------- */}
-          <ElectricBorder mode="hover">
-            <section className="card" aria-label="Session report">
-              <div className="card-head">
-                <div className="card-head-text">
-                  <h2>Session report</h2>
-                  <p className="muted">Every scan auto-saves to Supabase</p>
-                </div>
-                <span className="report-date">{todayLabel}</span>
-              </div>
-              <div className="report-body">
-                <PillButton to="/logs" variant="primary" className="btn-block">
-                  Open detection logs
-                </PillButton>
-              </div>
-            </section>
-          </ElectricBorder>
-
-          {/* ---------------- Scan summary ---------------- */}
-          <ElectricBorder mode="hover" variant="light">
-            <section className="card card-mint" aria-label="Scan summary">
-              <div className="card-head">
-                <div className="card-head-text">
-                  <h2>Scan summary</h2>
-                  <p className="muted">Latest analysis at a glance</p>
-                </div>
-              </div>
-              <div className="stat">
-                <div className="stat-value">{analyzing ? '…' : confLabel}</div>
-                <div className="stat-caption">Current confidence</div>
-              </div>
-              <div className="day-tiles">
-                <div className="day-tile">
-                  <small>Day</small>
-                  <strong>{result?.predicted_day?.replace(/^Day\s*/i, '') || '—'}</strong>
-                </div>
-                <div className="day-tile">
-                  <small>Stage</small>
-                  <strong>{result?.stage ? result.stage.split(' ')[0] : '—'}</strong>
-                </div>
-                <div className="day-tile">
-                  <small>Cam</small>
-                  <strong>{cameraKind}</strong>
-                </div>
-              </div>
-              <p className="muted small">
-                {showWarning
-                  ? lowConfidence
-                    ? 'Low confidence — recapture under better light.'
-                    : warnings.join(' ')
-                  : result
-                    ? 'Prediction stored under its incubation day.'
-                    : 'No scan yet — capture your first egg.'}
-              </p>
-            </section>
-          </ElectricBorder>
-
-          {/* ---------------- CTA ---------------- */}
-          <ElectricBorder mode="always" variant="light">
-            <section className="card card-mint cta-card" aria-label="Call to action">
-              <h2>Start new session</h2>
-              <div className="cta-row">
-                <p className="muted">Begin candling another egg</p>
-                <button
-                  className="cta-arrow"
-                  type="button"
-                  aria-label="Scroll to camera"
-                  onClick={() =>
-                    document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }
-                >
-                  ↗
-                </button>
-              </div>
-            </section>
+              </CardContent>
+            </Card>
           </ElectricBorder>
         </div>
-      </>
+
+        {/* ---------------- 2. AI Analysis Result ---------------- */}
+        <div className="md:col-span-2 lg:col-span-1">
+          <ElectricBorder mode="hover">
+            <Card className="h-full flex flex-col justify-between">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div>
+                  <CardTitle className="text-base font-semibold">AI Analysis Result</CardTitle>
+                  <CardDescription className="truncate">
+                    {result ? statusLabel : 'Awaiting egg image capture'}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline">Detail</Badge>
+              </CardHeader>
+
+              <CardContent className="space-y-4 flex-1">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="size-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {showWarning && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="size-4" />
+                    <AlertDescription>
+                      {lowConfidence
+                        ? result?.status ||
+                          'Low confidence — please recapture under better candling conditions.'
+                        : warnings.join(' ')}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {!result && !preview ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground border border-dashed border-border rounded-xl">
+                    <HelpCircle className="size-8 mb-2 opacity-40" />
+                    <p className="text-sm font-medium text-foreground">No analysis yet</p>
+                    <p className="text-xs text-muted-foreground max-w-xs mt-1">
+                      Capture or upload an egg to receive real-time incubation classification.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Big predicted day headline */}
+                    <div className="text-center py-2 bg-muted/30 rounded-xl border border-border/50">
+                      <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block">
+                        Predicted Incubation
+                      </span>
+                      <div
+                        className={`text-3xl font-extrabold tracking-tight mt-1 ${
+                          lowConfidence ? 'text-destructive' : 'text-foreground'
+                        }`}
+                      >
+                        {dayLabel}
+                      </div>
+                    </div>
+
+                    {/* Confidence track */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">AI Confidence</span>
+                        <span className="font-mono font-semibold text-foreground">
+                          {confLabel === '—' ? '—' : `${confidence.toFixed(2)}%`}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500 ease-out"
+                          style={{
+                            width: `${confidence ?? 0}%`,
+                            backgroundColor: lowConfidence
+                              ? 'var(--destructive)'
+                              : 'var(--chart-1)',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Ranked pills */}
+                    <BarPillChart items={pillItems} />
+
+                    {/* Metadata breakdown */}
+                    <div className="rounded-lg border border-border divide-y divide-border/50 text-xs">
+                      <div className="flex items-center justify-between p-2.5">
+                        <span className="text-muted-foreground">Development Stage</span>
+                        <span className="font-medium text-foreground">{stageLabel}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2.5">
+                        <span className="text-muted-foreground">Status</span>
+                        <span className="font-medium text-foreground">{statusLabel}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2.5">
+                        <span className="text-muted-foreground">Timestamp</span>
+                        <span className="font-mono text-foreground">{dateLabel}</span>
+                      </div>
+                      {preview && (
+                        <div className="p-2.5 flex items-center justify-between">
+                          <span className="text-muted-foreground">Captured Image</span>
+                          <img
+                            src={preview}
+                            alt="Captured preview"
+                            className="size-10 rounded-md object-cover border border-border"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </ElectricBorder>
+        </div>
+
+        {/* ---------------- 3. Confidence Donut ---------------- */}
+        <Card className="flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-base font-semibold">Scan Confidence</CardTitle>
+              <CardDescription>YOLO inference certainty</CardDescription>
+            </div>
+            <Button as={Link} to="/logs" variant="outline" size="xs">
+              History
+            </Button>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center py-4 space-y-4">
+            <DonutChart
+              value={confidence ?? 0}
+              centerTop={analyzing ? '…' : confLabel}
+              centerBottom="AI Score"
+            />
+            <div className="flex items-center justify-center gap-4 text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-foreground">
+                <span className="size-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+                Confirmed {confidence === null ? '—' : `${confidence.toFixed(0)}%`}
+              </span>
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="size-2 rounded-full bg-muted" />
+                Gap {confidence === null ? '—' : `${(100 - confidence).toFixed(0)}%`}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ---------------- 4. Model Status ---------------- */}
+        <ElectricBorder mode="always">
+          <Card className="flex flex-col justify-between h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">AI Model Status</CardTitle>
+              <CardDescription>Local YOLO classifier runtime</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between gap-4 py-2">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {modelStatus == null
+                    ? 'Connecting to backend…'
+                    : modelReady
+                      ? 'YOLO classifier is loaded and ready to candle eggs.'
+                      : 'Model is not trained yet — predictions disabled.'}
+                </p>
+                <Badge
+                  variant={modelReady ? 'default' : 'secondary'}
+                  className="gap-1 text-xs py-0.5"
+                >
+                  <span
+                    className={`size-2 rounded-full ${
+                      modelReady ? 'bg-emerald-500' : 'bg-muted-foreground'
+                    }`}
+                  />
+                  {modelStatus == null ? 'Checking…' : modelReady ? 'Ready' : 'Not ready'}
+                </Badge>
+              </div>
+              <BotEgg />
+            </CardContent>
+          </Card>
+        </ElectricBorder>
+
+        {/* ---------------- 5. Scan Summary & CTA ---------------- */}
+        <Card className="flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-base font-semibold">Session Summary</CardTitle>
+              <CardDescription>{todayLabel}</CardDescription>
+            </div>
+            <Badge variant="outline" className="font-mono text-xs">
+              {cameraKind}
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-4 py-2">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                  Day
+                </span>
+                <span className="text-lg font-bold text-foreground">
+                  {result?.predicted_day?.replace(/^Day\s*/i, '') || '—'}
+                </span>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                  Stage
+                </span>
+                <span className="text-lg font-bold text-foreground truncate block">
+                  {result?.stage ? result.stage.split(' ')[0] : '—'}
+                </span>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                  Conf
+                </span>
+                <span className="text-lg font-bold text-foreground">{confLabel}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {showWarning
+                ? lowConfidence
+                  ? 'Low confidence — recapture under better lighting.'
+                  : warnings.join(' ')
+                : result
+                  ? 'Prediction stored automatically under its incubation day.'
+                  : 'Capture or candle an egg to record this session.'}
+            </p>
+          </CardContent>
+          <CardFooter className="pt-0 flex gap-2">
+            <Button as={Link} to="/logs" variant="outline" size="sm" className="w-full gap-1.5">
+              <FileText className="size-3.5" /> Logs
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full gap-1.5"
+              onClick={() => {
+                document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+            >
+              Start New <ArrowUpRight className="size-3.5" />
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    </div>
   )
 }
-
