@@ -28,7 +28,7 @@
   <main>
     {% if model_ready %}
     <div class="banner ok">
-      Trained model loaded from {{ model_path }}. Predictions use this fine-tuned Day 1–21 classifier, not a generic pretrained YOLO model. Minimum confidence: {{ min_confidence }}%.
+      
     </div>
     {% else %}
     <div class="banner warn">
@@ -101,7 +101,7 @@
   </main>
 
   <footer>
-    Dataset: {{ dataset_dir }} · Local Flask application
+    
   </footer>
 
   <canvas id="canvas" style="display:none"></canvas>
