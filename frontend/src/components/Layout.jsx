@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import Logo from './Logo'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -18,10 +19,10 @@ export default function Layout() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">🥚</span>
+          <Logo size={38} variant="mark" />
           <div className="brand-text">
-            <h1>CANDOLER</h1>
-            <p>Egg candling · Day 1–21</p>
+            <h1>Egg Candling</h1>
+            <p>AI-powered egg analysis</p>
           </div>
         </div>
 
@@ -29,6 +30,7 @@ export default function Layout() {
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/logs">Logs</NavLink>
           <NavLink to="/archives">Archive</NavLink>
+          <NavLink to="/electric-border">FX Lab</NavLink>
         </nav>
 
         <div className="user">

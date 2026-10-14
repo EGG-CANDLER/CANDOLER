@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 
+import ElectricBorder from '../components/ui/ElectricBorder.jsx'
+import PillButton from '../components/ui/PillButton.jsx'
+import Logo from '../components/Logo'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
@@ -34,11 +37,12 @@ export default function Login() {
 
   return (
     <div className="auth-wrap">
-      <form className="auth-card" onSubmit={handleSubmit}>
+      <ElectricBorder mode="hover" className="auth-eb">
+        <form className="auth-card" onSubmit={handleSubmit}>
         <div className="auth-brand">
-          <span className="brand-mark" aria-hidden="true">🥚</span>
-          <h1>CANDOLER</h1>
-          <p className="muted">Egg candling · Day 1–21 classifier</p>
+          <Logo size={48} variant="mark" />
+          <h1>Egg Candling</h1>
+          <p className="muted">AI-powered egg analysis</p>
         </div>
 
         {error && (
@@ -71,14 +75,11 @@ export default function Login() {
           />
         </label>
 
-        <button
-          className="btn btn-primary btn-block"
-          type="submit"
-          disabled={submitting}
-        >
+        <PillButton variant="primary" className="btn-block" type="submit" disabled={submitting}>
           {submitting ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+        </PillButton>
+        </form>
+      </ElectricBorder>
     </div>
   )
 }
