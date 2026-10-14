@@ -1,51 +1,40 @@
-// Decorative SVG art — BotEgg mascot styled in pure white glassmorphism.
-export function BotEgg() {
+import * as React from 'react'
+
+// Decorative SVG art — BotEgg mascot styled adaptively for light & dark mode using design tokens
+export function BotEgg({ className = '' }) {
+  const id = React.useId().replace(/[^a-zA-Z0-9]/g, '')
+
   return (
-    <svg className="botegg" viewBox="0 0 160 170" role="img" aria-label="Egg Candling mascot">
+    <svg
+      className={`size-32 ${className}`}
+      viewBox="0 0 160 170"
+      role="img"
+      aria-label="Egg Candling mascot"
+    >
       <defs>
-        {/* White glass body gradient */}
-        <linearGradient id="botWhiteBody" x1="0%" y1="0%" x2="1" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0.18)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
+        <linearGradient id={`botBody${id}`} x1="0%" y1="0%" x2="1" y2="1">
+          <stop offset="0%" stopColor="var(--card)" stopOpacity="0.9" />
+          <stop offset="50%" stopColor="var(--muted)" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0.7" />
         </linearGradient>
 
-        {/* Glass fill overlay */}
-        <linearGradient id="botGlass" x1="0" y1="0" x2="0.6" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.30)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
-        </linearGradient>
-
-        {/* Specular radial */}
-        <radialGradient id="botSpec" cx="0.30" cy="0.22" r="0.85">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.60)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        <radialGradient id={`botSpec${id}`} cx="0.30" cy="0.22" r="0.85">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
-        {/* Visor dark glass */}
-        <linearGradient id="botVisor" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.04)" />
+        <linearGradient id={`botVisor${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.95" />
         </linearGradient>
 
-        {/* Eye glow gradient */}
-        <radialGradient id="botEye" cx="0.4" cy="0.4" r="0.7">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.7)" />
+        <radialGradient id={`botEye${id}`} cx="0.4" cy="0.4" r="0.7">
+          <stop offset="0%" stopColor="var(--chart-1)" />
+          <stop offset="100%" stopColor="var(--chart-2)" />
         </radialGradient>
 
-        {/* Glow filter */}
-        <filter id="bot-glow" x="-25%" y="-25%" width="150%" height="150%">
+        <filter id={`botGlow${id}`} x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-
-        {/* Eye glow filter */}
-        <filter id="eye-glow">
-          <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -54,44 +43,99 @@ export function BotEgg() {
       </defs>
 
       {/* Ground shadow */}
-      <ellipse cx="80" cy="158" rx="44" ry="8" fill="rgba(0,0,0,0.4)" />
+      <ellipse cx="80" cy="158" rx="44" ry="8" fill="var(--foreground)" opacity="0.1" />
 
       {/* Antenna */}
-      <line x1="80" y1="26" x2="80" y2="10" stroke="rgba(255,255,255,0.7)" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="80" cy="9" r="5" fill="#FFFFFF" filter="url(#eye-glow)" />
-      <circle cx="80" cy="9" r="5" fill="#FFFFFF" opacity="0.45">
-        <animate attributeName="r" values="5;10;5" dur="2.4s" repeatCount="indefinite" />
+      <line
+        x1="80"
+        y1="26"
+        x2="80"
+        y2="10"
+        stroke="var(--foreground)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
+      <circle cx="80" cy="9" r="5" fill="var(--chart-1)" filter={`url(#botGlow${id})`} />
+      <circle cx="80" cy="9" r="5" fill="var(--chart-1)" opacity="0.45">
+        <animate attributeName="r" values="5;9;5" dur="2.4s" repeatCount="indefinite" />
         <animate attributeName="opacity" values="0.45;0;0.45" dur="2.4s" repeatCount="indefinite" />
       </circle>
 
-      {/* Glass body */}
-      <ellipse cx="80" cy="92" rx="56" ry="64" fill="url(#botWhiteBody)" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" filter="url(#bot-glow)" />
-
-      {/* Glass overlay */}
-      <ellipse cx="80" cy="92" rx="56" ry="64" fill="url(#botGlass)" />
+      {/* Body */}
+      <ellipse
+        cx="80"
+        cy="92"
+        rx="56"
+        ry="64"
+        fill={`url(#botBody${id})`}
+        stroke="var(--border)"
+        strokeWidth="1.5"
+      />
 
       {/* Specular highlight */}
-      <ellipse cx="80" cy="92" rx="56" ry="64" fill="url(#botSpec)" />
+      <ellipse cx="80" cy="92" rx="56" ry="64" fill={`url(#botSpec${id})`} />
 
       {/* Visor */}
-      <rect x="42" y="66" width="76" height="40" rx="20" fill="url(#botVisor)" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+      <rect
+        x="42"
+        y="66"
+        width="76"
+        height="40"
+        rx="20"
+        fill={`url(#botVisor${id})`}
+        stroke="var(--border)"
+        strokeWidth="1"
+      />
 
-      {/* Visor glass reflection */}
-      <rect x="42" y="66" width="76" height="16" rx="20" fill="rgba(255,255,255,0.12)" />
+      {/* Visor reflection */}
+      <rect
+        x="44"
+        y="68"
+        width="72"
+        height="14"
+        rx="7"
+        fill="var(--background)"
+        opacity="0.18"
+      />
 
       {/* Eyes */}
-      <circle cx="66" cy="86" r="9" fill="url(#botEye)" filter="url(#eye-glow)" />
-      <circle cx="94" cy="86" r="9" fill="url(#botEye)" filter="url(#eye-glow)" />
-      <circle cx="63.5" cy="83.5" r="2.5" fill="rgba(255,255,255,0.9)" />
-      <circle cx="91.5" cy="83.5" r="2.5" fill="rgba(255,255,255,0.9)" />
+      <circle cx="66" cy="86" r="8" fill={`url(#botEye${id})`} />
+      <circle cx="94" cy="86" r="8" fill={`url(#botEye${id})`} />
+      <circle cx="64" cy="84" r="2.5" fill="#FFFFFF" opacity="0.95" />
+      <circle cx="92" cy="84" r="2.5" fill="#FFFFFF" opacity="0.95" />
 
       {/* Chest light */}
-      <circle cx="80" cy="124" r="10" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" />
-      <circle cx="80" cy="124" r="6" fill="#FFFFFF" filter="url(#eye-glow)" />
+      <circle
+        cx="80"
+        cy="124"
+        r="10"
+        fill="var(--muted)"
+        stroke="var(--border)"
+      />
+      <circle cx="80" cy="124" r="6" fill="var(--chart-1)" filter={`url(#botGlow${id})`} />
 
-      {/* Side pods — frosted glass */}
-      <rect x="16" y="86" width="12" height="26" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-      <rect x="132" y="86" width="12" height="26" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+      {/* Side pods */}
+      <rect
+        x="16"
+        y="86"
+        width="12"
+        height="26"
+        rx="6"
+        fill="var(--muted)"
+        stroke="var(--border)"
+        strokeWidth="1"
+      />
+      <rect
+        x="132"
+        y="86"
+        width="12"
+        height="26"
+        rx="6"
+        fill="var(--muted)"
+        stroke="var(--border)"
+        strokeWidth="1"
+      />
     </svg>
   )
 }

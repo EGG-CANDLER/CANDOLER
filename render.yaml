@@ -1,0 +1,28 @@
+# render.yaml — Render Blueprint for the CANDOLER backend
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy steps:
+#   1. Push this repo to GitHub/GitLab.
+#   2. In Render → New → Blueprint → connect your repo.
+#   3. Render picks this file up automatically.
+#   4. Fill in the secret env vars in the Render dashboard
+#      (SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_JWT_SECRET, ALLOWED_ORIGINS).
+
+services:
+  - type: web
+    name: candoler-api
+    runtime: docker          # uses the root Dockerfile
+    dockerfilePath: ./Dockerfile
+    plan: free               # change to "starter" for always-on
+    healthCheckPath: /api/status
+    envVars:
+      - key: SUPABASE_URL
+        sync: false          # set manually in Render dashboard
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false          # e.g. https://candoler.vercel.app
+      - key: PORT
+        value: 8000          # Render injects $PORT; Dockerfile already uses ${PORT:-8000}
