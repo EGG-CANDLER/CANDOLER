@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   Camera,
+  CheckCircle2,
   FileText,
   HelpCircle,
   RefreshCw,
@@ -28,7 +29,8 @@ import {
 } from '../components/ui/Card'
 import { AreaChart, BarPillChart, DonutChart } from '../components/ui/charts'
 import { CountUp } from '../components/ui/CountUp'
-import { BotEgg } from '../components/ui/Decor'
+import heroEggBanner from '../images/replicate-prediction-26ddlflbm57oka6562tqpt23fu.png'
+import poultryFarmThumb from '../images/chickens-the-new-egg-farmer-what-to-expect-fom-your-fresh-chicken-eggs.jpg'
 
 const IDEAL = { width: { ideal: 1280 }, height: { ideal: 720 } }
 
@@ -58,9 +60,9 @@ export default function Dashboard() {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
       gsap.from('.gsap-card', {
         opacity: 0,
-        y: 18,
-        duration: 0.45,
-        stagger: 0.08,
+        y: 14,
+        duration: 0.4,
+        stagger: 0.06,
         ease: 'power2.out',
       })
     },
@@ -79,7 +81,7 @@ export default function Dashboard() {
           { top: '0%', opacity: 0.8 },
           {
             top: '100%',
-            opacity: 0.3,
+            opacity: 0.2,
             duration: analyzing ? 1.2 : 2.5,
             repeat: -1,
             yoyo: true,
@@ -98,102 +100,75 @@ export default function Dashboard() {
     api.status().then(setModelStatus).catch(() => {})
   }, [])
 
-  const refreshCameras = React.useCallback(async () => {
-    if (!navigator.mediaDevices?.enumerateDevices) return []
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const vids = devices.filter((d) => d.kind === 'videoinput')
-      setCameras(vids)
-      return vids
-    } catch {
-      return []
+  // Camera enumerate
+  React.useEffect(() => {
+    async function getCameras() {
+      if (!navigator.mediaDevices?.enumerateDevices) return
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const videoInputs = devices.filter((d) => d.kind === 'videoinput')
+        setCameras(videoInputs)
+        if (videoInputs.length && !deviceId) {
+          setDeviceId(videoInputs[0].deviceId)
+        }
+      } catch (err) {
+        console.warn('Cannot enumerate devices:', err)
+      }
     }
-  }, [])
+    getCameras()
+  }, [deviceId])
 
-  const stopTracks = React.useCallback(() => {
+  function stopCamera() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
-  }, [])
-
-  const stopCamera = React.useCallback(() => {
-    stopTracks()
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
     setStream(null)
-    if (videoRef.current) videoRef.current.srcObject = null
     setCameraStatus('Camera off')
-  }, [stopTracks])
-
-  const startCamera = React.useCallback(
-    async (id, facing) => {
-      setCameraError('')
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraError('Camera API is not supported by this browser.')
-        return
-      }
-      stopTracks()
-      setCameraStatus('Starting camera…')
-      try {
-        const video = id
-          ? { deviceId: { exact: id }, ...IDEAL }
-          : { facingMode: { ideal: facing }, ...IDEAL }
-        const media = await navigator.mediaDevices.getUserMedia({
-          video,
-          audio: false,
-        })
-        streamRef.current = media
-        setStream(media)
-
-        const track = media.getVideoTracks()[0]
-        const settings = (track && track.getSettings && track.getSettings()) || {}
-        if (settings.deviceId) setDeviceId(settings.deviceId)
-
-        setCameraStatus('Camera on')
-        refreshCameras()
-      } catch (err) {
-        setCameraStatus('Camera error')
-        setCameraError(
-          (err && err.message) || 'Could not open the camera. Try another camera.',
-        )
-      }
-    },
-    [stopTracks, refreshCameras],
-  )
-
-  // Attach the live stream to the <video> element.
-  React.useEffect(() => {
-    const video = videoRef.current
-    if (video && stream) {
-      video.srcObject = stream
-      video.play().catch(() => {})
-    }
-  }, [stream])
-
-  // Release the camera when leaving the page.
-  React.useEffect(() => () => stopTracks(), [stopTracks])
-
-  async function handleStart() {
-    await startCamera(deviceId || '', facingMode)
-    refreshCameras()
   }
 
-  async function handleSwitch() {
-    const vids = cameras.length ? cameras : await refreshCameras()
-    if (vids.length > 1) {
-      const index = vids.findIndex((c) => c.deviceId === deviceId)
-      const next = vids[(index + 1 + vids.length) % vids.length]
-      await startCamera(next.deviceId, facingMode)
-    } else {
-      const nextFacing = facingMode === 'user' ? 'environment' : 'user'
-      setFacingMode(nextFacing)
-      await startCamera('', nextFacing)
+  async function startCamera(constraints) {
+    stopCamera()
+    setCameraError('')
+    setCameraStatus('Starting…')
+    try {
+      const media = await navigator.mediaDevices.getUserMedia(constraints)
+      streamRef.current = media
+      setStream(media)
+      if (videoRef.current) {
+        videoRef.current.srcObject = media
+      }
+      setCameraStatus('Live')
+    } catch (err) {
+      setCameraError(err.message || 'Cannot access camera.')
+      setCameraStatus('Unavailable')
     }
   }
 
-  function handleSelectCamera(event) {
-    const id = event.target.value
+  function handleStart() {
+    const constraints = {
+      video: deviceId
+        ? { deviceId: { exact: deviceId }, ...IDEAL }
+        : { facingMode, ...IDEAL },
+    }
+    startCamera(constraints)
+  }
+
+  function handleSwitch() {
+    const next = facingMode === 'environment' ? 'user' : 'environment'
+    setFacingMode(next)
+    startCamera({ video: { facingMode: next, ...IDEAL } })
+  }
+
+  function handleSelectCamera(e) {
+    const id = e.target.value
     setDeviceId(id)
-    if (streamRef.current) startCamera(id, facingMode)
+    if (stream) {
+      startCamera({ video: { deviceId: { exact: id }, ...IDEAL } })
+    }
   }
 
   async function analyze(dataUrl) {
@@ -288,6 +263,37 @@ export default function Dashboard() {
 
   return (
     <div ref={dashboardRef} className="flex flex-col gap-6">
+      {/* Agribusiness Section Hero Banner Card */}
+      <div className="gsap-card relative overflow-hidden rounded-xl border border-border bg-card p-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="relative z-10 max-w-xl">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#E8F5E9] dark:bg-[#1B291F] text-[#1E4D2B] dark:text-[#52B788] text-xs font-medium mb-3">
+            <CheckCircle2 className="size-3.5" />
+            Poultry Incubation Quality Control
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Egg Candling & Embryo Development
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            Real-time optical density candling analysis. Capture or upload egg candling images to determine incubation age and embryonic viability.
+          </p>
+        </div>
+
+        {/* Hero Visual Asset preview card */}
+        <div className="relative z-10 w-full sm:w-72 shrink-0 rounded-lg overflow-hidden border border-border shadow-xs bg-muted/40">
+          <img
+            src={heroEggBanner}
+            alt="Candled Egg Sample"
+            className="w-full h-28 object-cover object-center"
+          />
+          <div className="p-2.5 bg-card flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground">Active Calibration</span>
+            <span className="text-[11px] font-medium text-[#1E4D2B] dark:text-[#52B788]">
+              YOLO v11 Candler
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Model readiness alert if unavailable */}
       {modelStatus && !modelStatus.model_ready && (
         <Alert variant="destructive">
@@ -299,7 +305,7 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      {/* Main Bento Grid with staggered GSAP entrance */}
+      {/* Main Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* ---------------- 1. Live Camera Scanner ---------------- */}
         <div className="gsap-card md:col-span-2 lg:col-span-2">
@@ -307,7 +313,7 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Camera className="size-4 text-primary animate-pulse" /> Live Camera
+                  <Camera className="size-4 text-primary" /> Live Camera Candler
                 </CardTitle>
                 <CardDescription>Candle the egg, capture, and run YOLO inference</CardDescription>
               </div>
@@ -317,7 +323,7 @@ export default function Dashboard() {
               >
                 <span
                   className={`size-2 rounded-full ${
-                    stream ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'
+                    stream ? 'bg-[#52B788] animate-pulse' : 'bg-muted-foreground'
                   }`}
                 />
                 {cameraStatus}
@@ -325,8 +331,8 @@ export default function Dashboard() {
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Video container with candling beam effect */}
-              <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/90 flex items-center justify-center border border-border group">
+              {/* Video container with minimal sweep effect */}
+              <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-zinc-950 flex items-center justify-center border border-border group">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -338,17 +344,17 @@ export default function Dashboard() {
                 {/* Animated candling light scanning sweep */}
                 <div
                   ref={scanBeamRef}
-                  className={`absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[var(--chart-1)] to-transparent pointer-events-none shadow-[0_0_12px_var(--chart-1)] ${
+                  className={`absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#52B788] to-transparent pointer-events-none shadow-[0_0_10px_#52B788] ${
                     stream || analyzing ? 'block' : 'hidden'
                   }`}
                 />
 
                 {!stream && (
                   <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
-                    <VideoOff className="size-10 mb-2 opacity-50" />
-                    <p className="text-sm font-medium text-foreground">Camera is offline</p>
-                    <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                      Start the live feed or upload a candling photograph to begin.
+                    <VideoOff className="size-9 mb-2 opacity-40 text-muted-foreground" />
+                    <p className="text-sm font-medium text-zinc-200">Camera is offline</p>
+                    <p className="text-xs text-zinc-400 max-w-sm mt-1">
+                      Start the live optical feed or upload an egg candling photo to begin.
                     </p>
                   </div>
                 )}
@@ -361,13 +367,13 @@ export default function Dashboard() {
                 </Alert>
               )}
 
-              {/* Camera selector & action buttons with micro-interactions */}
+              {/* Camera selector & action buttons */}
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
                 <div className="flex items-center gap-2 flex-1 max-w-xs">
                   <select
                     value={deviceId}
                     onChange={handleSelectCamera}
-                    className="w-full text-xs h-9 rounded-md border border-border bg-background px-3 py-1 text-foreground focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50"
+                    className="w-full text-xs h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">
                       {cameras.length ? 'Default camera' : 'No camera detected'}
@@ -386,7 +392,7 @@ export default function Dashboard() {
                       variant="default"
                       size="sm"
                       onClick={handleStart}
-                      className="gap-1.5 hover:-translate-y-0.5 active:scale-95 transition-all"
+                      className="gap-1.5"
                     >
                       <Camera className="size-3.5" /> Start camera
                     </Button>
@@ -395,7 +401,6 @@ export default function Dashboard() {
                       variant="destructive"
                       size="sm"
                       onClick={stopCamera}
-                      className="hover:-translate-y-0.5 active:scale-95 transition-all"
                     >
                       Stop
                     </Button>
@@ -407,7 +412,7 @@ export default function Dashboard() {
                     onClick={handleSwitch}
                     disabled={!stream}
                     title="Switch camera"
-                    className="hover:rotate-180 transition-transform duration-300 active:scale-95"
+                    className="transition-transform duration-200 active:scale-95"
                   >
                     <RefreshCw className="size-3.5" />
                   </Button>
@@ -417,15 +422,15 @@ export default function Dashboard() {
                     size="sm"
                     onClick={handleCapture}
                     disabled={!stream || analyzing}
-                    className="gap-1.5 font-medium hover:-translate-y-0.5 active:scale-95 transition-all shadow-xs"
+                    className="gap-1.5 font-medium shadow-xs"
                   >
-                    <Sparkles className="size-3.5 animate-pulse text-primary-foreground" />
+                    <Sparkles className="size-3.5 text-primary-foreground" />
                     {analyzing ? 'Analyzing…' : 'Capture & analyze'}
                   </Button>
 
                   <label className="inline-flex cursor-pointer">
                     <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
-                    <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground hover:-translate-y-0.5 active:scale-95 transition-all focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50">
+                    <span className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-all">
                       <Upload className="size-3.5" /> Upload
                     </span>
                   </label>
@@ -478,8 +483,8 @@ export default function Dashboard() {
               )}
 
               {!result && !preview ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                  <HelpCircle className="size-8 mb-2 opacity-40 animate-pulse" />
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground border border-dashed border-border rounded-lg">
+                  <HelpCircle className="size-8 mb-2 opacity-40 text-muted-foreground" />
                   <p className="text-sm font-medium text-foreground">No analysis yet</p>
                   <p className="text-xs text-muted-foreground max-w-xs mt-1">
                     Capture or upload an egg to receive real-time incubation classification.
@@ -488,13 +493,13 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {/* Big predicted day headline */}
-                  <div className="text-center py-2 bg-muted/30 rounded-xl border border-border/50">
-                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold block">
+                  <div className="text-center py-2.5 bg-muted/40 rounded-lg border border-border">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold block">
                       Predicted Incubation
                     </span>
                     <div
-                      className={`text-3xl font-extrabold tracking-tight mt-1 ${
-                        lowConfidence ? 'text-destructive' : 'text-foreground'
+                      className={`text-3xl font-bold tracking-tight mt-1 ${
+                        lowConfidence ? 'text-destructive' : 'text-[#1E4D2B] dark:text-[#52B788]'
                       }`}
                     >
                       {dayLabel}
@@ -520,7 +525,7 @@ export default function Dashboard() {
                           width: `${confidence ?? 0}%`,
                           backgroundColor: lowConfidence
                             ? 'var(--destructive)'
-                            : 'var(--chart-1)',
+                            : '#1E4D2B',
                         }}
                       />
                     </div>
@@ -530,7 +535,7 @@ export default function Dashboard() {
                   <BarPillChart items={pillItems} />
 
                   {/* Metadata breakdown */}
-                  <div className="rounded-lg border border-border divide-y divide-border/50 text-xs">
+                  <div className="rounded-lg border border-border divide-y divide-border text-xs">
                     <div className="flex items-center justify-between p-2.5">
                       <span className="text-muted-foreground">Development Stage</span>
                       <span className="font-medium text-foreground">{stageLabel}</span>
@@ -578,9 +583,10 @@ export default function Dashboard() {
                 centerTop={analyzing ? '…' : confLabel}
                 centerBottom="AI Score"
               />
+
               <div className="flex items-center justify-center gap-4 text-xs">
                 <span className="flex items-center gap-1.5 font-medium text-foreground">
-                  <span className="size-2 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+                  <span className="size-2 rounded-full bg-[#1E4D2B] dark:bg-[#52B788]" />
                   Confirmed {confidence === null ? '—' : `${confidence.toFixed(0)}%`}
                 </span>
                 <span className="flex items-center gap-1.5 text-muted-foreground">
@@ -592,7 +598,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* ---------------- 4. Model Status ---------------- */}
+        {/* ---------------- 4. Model Status with Farm Context ---------------- */}
         <div className="gsap-card">
           <Card className="flex flex-col justify-between h-full">
             <CardHeader className="pb-2">
@@ -605,22 +611,29 @@ export default function Dashboard() {
                   {modelStatus == null
                     ? 'Connecting to backend…'
                     : modelReady
-                      ? 'YOLO classifier is loaded and ready to candle eggs.'
+                      ? 'YOLO classifier is online and ready for incubation batches.'
                       : 'Model is not trained yet — predictions disabled.'}
                 </p>
                 <Badge
-                  variant={modelReady ? 'default' : 'secondary'}
+                  variant={modelReady ? 'leaf' : 'secondary'}
                   className="gap-1 text-xs py-0.5"
                 >
                   <span
                     className={`size-2 rounded-full ${
-                      modelReady ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'
+                      modelReady ? 'bg-[#52B788] animate-pulse' : 'bg-muted-foreground'
                     }`}
                   />
-                  {modelStatus == null ? 'Checking…' : modelReady ? 'Ready' : 'Not ready'}
+                  {modelStatus == null ? 'Checking…' : modelReady ? 'Operational' : 'Not ready'}
                 </Badge>
               </div>
-              <BotEgg className="hover:scale-105 transition-transform duration-300" />
+
+              <div className="relative size-16 shrink-0 rounded-lg overflow-hidden border border-border shadow-xs">
+                <img
+                  src={poultryFarmThumb}
+                  alt="Poultry farm hens"
+                  className="size-full object-cover"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -639,7 +652,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-4 py-2">
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                <div className="rounded-lg bg-muted/40 p-2.5 border border-border">
                   <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                     Day
                   </span>
@@ -647,7 +660,7 @@ export default function Dashboard() {
                     {result?.predicted_day?.replace(/^Day\s*/i, '') || '—'}
                   </span>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                <div className="rounded-lg bg-muted/40 p-2.5 border border-border">
                   <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                     Stage
                   </span>
@@ -655,7 +668,7 @@ export default function Dashboard() {
                     {result?.stage ? result.stage.split(' ')[0] : '—'}
                   </span>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5 border border-border/50">
+                <div className="rounded-lg bg-muted/40 p-2.5 border border-border">
                   <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                     Conf
                   </span>
@@ -672,21 +685,21 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {showWarning
                   ? lowConfidence
-                    ? 'Low confidence — recapture under better lighting.'
+                    ? 'Low confidence — recapture under better optical lighting.'
                     : warnings.join(' ')
                   : result
-                    ? 'Prediction stored automatically under its incubation day.'
+                    ? 'Prediction recorded in local detection database.'
                     : 'Capture or candle an egg to record this session.'}
               </p>
             </CardContent>
             <CardFooter className="pt-0 flex gap-2">
-              <Button as={Link} to="/logs" variant="outline" size="sm" className="w-full gap-1.5 hover:-translate-y-0.5 active:scale-95 transition-all">
+              <Button as={Link} to="/logs" variant="outline" size="sm" className="w-full gap-1.5">
                 <FileText className="size-3.5" /> Logs
               </Button>
               <Button
                 variant="default"
                 size="sm"
-                className="w-full gap-1.5 hover:-translate-y-0.5 active:scale-95 transition-all"
+                className="w-full gap-1.5"
                 onClick={() => {
                   document.getElementById('scanner')?.scrollIntoView({ behavior: 'smooth' })
                 }}
