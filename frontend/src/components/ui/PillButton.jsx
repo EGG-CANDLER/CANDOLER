@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import { buttonVariants } from './button'
 
-// PillButton — fully pill-shaped button (rounded-4xl) adhering to design system tokens
+// PillButton — gently rounded button (rounded-xl) adhering to design system tokens
 export default function PillButton({
   as,
   to,
@@ -22,7 +22,7 @@ export default function PillButton({
 
   const cls = cn(
     buttonVariants({ variant: mappedVariant, size }),
-    'rounded-4xl font-medium cursor-pointer',
+    'rounded-lg font-medium cursor-pointer',
     className,
   )
 
