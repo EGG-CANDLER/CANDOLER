@@ -40,8 +40,8 @@ export const TabsTrigger = React.forwardRef(
         className={cn(
           'relative inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all cursor-pointer focus-visible:ring-3 focus-visible:border-ring focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50',
           variant === 'default'
-            ? 'rounded-md px-3 py-1 data-[selected]:bg-background data-[selected]:text-foreground data-[selected]:shadow-xs hover:text-foreground'
-            : 'px-3 py-2 data-[selected]:text-foreground hover:text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:opacity-0 after:transition-opacity data-[selected]:after:opacity-100 data-active:after:opacity-100',
+            ? 'rounded-md px-3 py-1 data-[selected]:bg-card data-[selected]:text-primary data-[selected]:shadow-xs hover:text-foreground'
+            : 'px-3 py-2 data-[selected]:text-primary hover:text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:opacity-0 after:transition-opacity data-[selected]:after:opacity-100 data-active:after:opacity-100',
           className,
         )}
         {...props}
