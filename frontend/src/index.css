@@ -28,6 +28,14 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Agribusiness Palette semantic color tokens */
+  --color-forest: #1E4D2B;
+  --color-forest-hover: #2D6A4F;
+  --color-leaf: #52B788;
+  --color-canvas: #F8F9FA;
+  --color-charcoal: #111827;
+  --color-muted-text: #4B5563;
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -64,89 +72,105 @@
   --radius: 0.625rem;
   --card-spacing: 1.5rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Neutral off-white canvas and dark charcoal typography */
+  --background: #F8F9FA;
+  --foreground: #111827;
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
 
-  /* Chart colors - Light: orange (41.116), teal (184.704), steel blue (227.392), yellow (84.429), amber (70.08) */
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Deep Forest Green (#1E4D2B) as primary */
+  --primary: #1E4D2B;
+  --primary-foreground: #FFFFFF;
 
-  /* Sidebar token set */
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Subtle secondary & muted surfaces */
+  --secondary: #F3F4F6;
+  --secondary-foreground: #111827;
+  --muted: #F3F4F6;
+  --muted-foreground: #4B5563;
+
+  /* Fresh Leaf Green (#52B788) accent fill */
+  --accent: #E8F5E9;
+  --accent-foreground: #1E4D2B;
+
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+
+  /* 1px soft border (#E5E7EB) */
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #52B788;
+
+  /* Chart / visual indicators: Leaf green, forest, amber, teal, coral */
+  --chart-1: #1E4D2B;
+  --chart-2: #52B788;
+  --chart-3: #2D6A4F;
+  --chart-4: #D97706;
+  --chart-5: #059669;
+
+  /* Sidebar token set with cohesive forest/leaf green highlights */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #1E4D2B;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E8F5E9;
+  --sidebar-accent-foreground: #1E4D2B;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #52B788;
 
   --sidebar-width: 16rem;
   --sidebar-width-icon: 3rem;
   --sidebar-width-mobile: 18rem;
 
-  --cell-shadow-color: oklch(0 0 0 / 0%);
+  --cell-shadow-color: rgba(0, 0, 0, 0.02);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #0D140F;
+  --foreground: #F9FAFB;
+  --card: #141E17;
+  --card-foreground: #F9FAFB;
+  --popover: #141E17;
+  --popover-foreground: #F9FAFB;
 
-  /* Chart colors - Dark: blue (264.376), green (162.48), amber (70.08), purple (303.9), coral (16.439) */
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  /* Primary green in dark mode */
+  --primary: #52B788;
+  --primary-foreground: #09150D;
+
+  --secondary: #1F2D24;
+  --secondary-foreground: #F9FAFB;
+  --muted: #1A261E;
+  --muted-foreground: #9CA3AF;
+
+  --accent: #1F2E23;
+  --accent-foreground: #52B788;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #233328;
+  --input: #233328;
+  --ring: #52B788;
+
+  /* Chart colors - Dark */
+  --chart-1: #52B788;
+  --chart-2: #2D6A4F;
+  --chart-3: #74C69D;
+  --chart-4: #F59E0B;
+  --chart-5: #10B981;
 
   /* Sidebar dark token set */
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: #111A13;
+  --sidebar-foreground: #F9FAFB;
+  --sidebar-primary: #52B788;
+  --sidebar-primary-foreground: #09150D;
+  --sidebar-accent: #1B291F;
+  --sidebar-accent-foreground: #52B788;
+  --sidebar-border: #233328;
+  --sidebar-ring: #52B788;
 
-  --cell-shadow-color: oklch(1 0 0 / 5%);
+  --cell-shadow-color: rgba(0, 0, 0, 0.2);
 }
 
 @layer base {
@@ -171,91 +195,3 @@
     cursor: pointer;
   }
 }
-
-@property --eb-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0turn;
-}
-
-.eb-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-.electric-border {
-  position: relative;
-  isolation: isolate;
-  border-radius: var(--eb-radius, var(--radius));
-  transition: transform 0.2s ease;
-}
-
-.electric-border::before,
-.electric-border::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: var(--eb-thickness, 1.5px);
-  background: conic-gradient(
-    from var(--eb-angle, 0turn),
-    transparent 0turn,
-    color-mix(in oklch, var(--eb-color, var(--primary)) 40%, transparent) 0.35turn,
-    var(--eb-color, var(--primary)) 0.5turn,
-    color-mix(in oklch, var(--eb-color, var(--primary)) 40%, transparent) 0.65turn,
-    transparent 1turn
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.electric-border::before {
-  animation: eb-spin var(--eb-speed, 4.5s) linear infinite;
-}
-
-.electric-border::after {
-  filter: blur(var(--eb-glow, 12px));
-  animation: eb-spin var(--eb-speed, 4.5s) linear infinite;
-}
-
-@keyframes eb-spin {
-  to {
-    --eb-angle: 1turn;
-  }
-}
-
-.eb-always::before {
-  opacity: 1;
-}
-.eb-always::after {
-  opacity: 0.45;
-}
-
-.eb-hover::before,
-.eb-hover::after {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.eb-hover:hover::before,
-.eb-hover:focus-within::before {
-  opacity: 1;
-}
-
-.eb-hover:hover::after,
-.eb-hover:focus-within::after {
-  opacity: 0.45;
-}
-
-.eb-inner {
-  position: relative;
-  border-radius: inherit;
-  width: 100%;
-  height: 100%;
-}
-
