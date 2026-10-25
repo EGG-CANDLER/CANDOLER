@@ -4,7 +4,6 @@ import Layout from './components/Layout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Archives from './pages/Archives.jsx'
 import Dashboard from './pages/Dashboard.jsx'
-import ElectricBorderLab from './pages/ElectricBorderLab.jsx'
 import Login from './pages/Login.jsx'
 import Logs from './pages/Logs.jsx'
 import Manager from './pages/Manager.jsx'
@@ -21,7 +20,6 @@ export default function App() {
           <Route path="logs" element={<Logs />} />
           <Route path="archives" element={<Archives />} />
           <Route path="manager" element={<Manager />} />
-          <Route path="electric-border" element={<ElectricBorderLab />} />
         </Route>
       </Route>
 
