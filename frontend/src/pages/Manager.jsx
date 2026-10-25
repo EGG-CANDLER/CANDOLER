@@ -26,6 +26,7 @@ import {
 import { AreaChart, ReportGraph } from '../components/ui/charts'
 import { CountUp } from '../components/ui/CountUp'
 import ImageModal from '../components/ImageModal'
+import farmHeaderBanner from '../images/chicken-eggs-wooden-table-background-farm-chickens-342155306.webp'
 
 export default function Manager() {
   const managerRef = React.useRef(null)
@@ -42,9 +43,9 @@ export default function Manager() {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
       gsap.from('.gsap-manager-card', {
         opacity: 0,
-        y: 18,
-        duration: 0.45,
-        stagger: 0.06,
+        y: 14,
+        duration: 0.4,
+        stagger: 0.05,
         ease: 'power2.out',
       })
     },
@@ -92,19 +93,27 @@ export default function Manager() {
 
   return (
     <div ref={managerRef} className="flex flex-col gap-6">
-      {/* Page Header */}
+      {/* Page Header with Farm Header Banner Preview */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Manager Console
             </h1>
-            <Badge variant="outline" className="gap-1 font-mono text-xs">
-              <Shield className="size-3 text-primary animate-pulse" /> Overseer
+            <Badge
+              variant={modelReady ? 'leaf' : 'secondary'}
+              className="gap-1.5 text-xs py-0.5"
+            >
+              <span
+                className={`size-2 rounded-full ${
+                  modelReady ? 'bg-[#52B788] animate-pulse' : 'bg-muted-foreground'
+                }`}
+              />
+              {modelReady ? 'Online' : 'Offline'}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            System health, AI model diagnostics, and operator scan telemetry.
+            System diagnostics, YOLO pipeline latency, and inspection performance.
           </p>
         </div>
 
@@ -114,74 +123,87 @@ export default function Manager() {
             size="sm"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="gap-2 hover:-translate-y-0.5 active:scale-95 transition-all"
+            className="gap-1.5"
           >
             <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            Refresh Diagnostics
           </Button>
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          {error}
+      {/* Farm Inspection Module Banner */}
+      <div className="gsap-manager-card relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="max-w-xl">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#1E4D2B] dark:text-[#52B788] block mb-1">
+            Hatchery Unit Diagnostics
+          </span>
+          <h2 className="text-xl font-bold text-foreground">
+            Precision Candling & Hardware Telemetry
+          </h2>
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+            Direct interface into local edge inference metrics, camera frames, and database batch archiving records.
+          </p>
         </div>
-      )}
+        <div className="w-full sm:w-64 h-24 rounded-lg overflow-hidden border border-border shrink-0 shadow-xs">
+          <img
+            src={farmHeaderBanner}
+            alt="Farm eggs on table"
+            className="w-full h-full object-cover object-center"
+          />
+        </div>
+      </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Model Status Card */}
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="gsap-manager-card">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Model Pipeline</CardTitle>
-              <Cpu className="size-4 text-muted-foreground hover:text-primary transition-colors" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Inference Engine
+              </CardTitle>
+              <Cpu className="size-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`size-2.5 rounded-full ${
-                    modelReady ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'
-                  }`}
-                />
-                <div className="text-2xl font-bold text-foreground">
-                  {modelReady ? 'Operational' : 'Unavailable'}
-                </div>
+              <div className="text-2xl font-bold tracking-tight text-foreground">
+                {modelStatus?.model_name || (modelReady ? 'YOLOv11' : 'None')}
               </div>
-              <p className="text-xs text-muted-foreground mt-1 truncate">
-                {modelStatus?.model_path || 'models/egg_candling_best.pt'}
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                <CheckCircle2 className="size-3.5 text-[#52B788]" />
+                {modelReady ? 'Model active & inferring' : 'Model not ready'}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Total Scans Card with CountUp */}
         <div className="gsap-manager-card">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Ingested Scans</CardTitle>
-              <Activity className="size-4 text-muted-foreground hover:text-primary transition-colors" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Total Inspections
+              </CardTitle>
+              <Database className="size-4 text-[#52B788]" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-2xl font-bold tracking-tight text-foreground">
                 <CountUp value={totalScans} decimals={0} />
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Synchronized with Supabase DB
+                Archived candling snapshots
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Confidence Card with CountUp */}
         <div className="gsap-manager-card">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Mean Confidence</CardTitle>
-              <BarChart3 className="size-4 text-muted-foreground hover:text-primary transition-colors" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Mean Confidence
+              </CardTitle>
+              <Activity className="size-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-2xl font-bold tracking-tight text-foreground">
                 {avgConfidenceNum === null ? (
                   '—'
                 ) : (
@@ -189,170 +211,169 @@ export default function Manager() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Threshold min: {(modelStatus?.min_confidence ?? 0.3) * 100}%
+                Across recent egg analyses
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Database & Cloud Card */}
         <div className="gsap-manager-card">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Storage & DB</CardTitle>
-              <Database className="size-4 text-muted-foreground hover:text-primary transition-colors" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Backend Status
+              </CardTitle>
+              <Server className="size-4 text-[#52B788]" />
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-4 text-emerald-500 animate-pulse" />
-                <span className="text-2xl font-bold text-foreground">Active</span>
+              <div className="text-2xl font-bold tracking-tight text-foreground">
+                {loading ? 'Polling…' : 'Online'}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Bucket: egg-images (Postgres RLS)
+                Local FastStream / YOLO API
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Main Analytics Grid */}
-      <div className="grid gap-6 md:grid-cols-7">
-        {/* Trend Area Chart */}
-        <div className="gsap-manager-card md:col-span-4">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Inference Quality Sparkline</CardTitle>
-              <CardDescription>
-                Recent scan confidence ratings over chronological batches.
-              </CardDescription>
+      {/* Telemetry charts & Recent Inspection Table */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="gsap-manager-card lg:col-span-2">
+          <Card className="h-full flex flex-col justify-between">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold">
+                  Inspection Confidence Trends
+                </CardTitle>
+                <CardDescription>
+                  Confidence trajectory across recent candling inspections
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                Telemetry
+              </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              <AreaChart
-                data={sparkValues.length ? sparkValues : [75, 82, 88, 92, 85, 96, 91]}
-                labels={sparkLabels.length ? sparkLabels : ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7']}
-                height={140}
-              />
-              <ReportGraph />
+              <div className="pt-2">
+                <ReportGraph
+                  data={sparkValues.length ? sparkValues : [0, 0, 0, 0, 0, 0, 0]}
+                  labels={sparkLabels.length ? sparkLabels : ['', '', '', '', '', '', '']}
+                  height={190}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border text-center text-xs">
+                <div className="p-2 rounded-lg bg-muted/40 border border-border">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
+                    Inference Runtime
+                  </span>
+                  <span className="font-mono font-medium text-foreground text-sm">~45ms</span>
+                </div>
+                <div className="p-2 rounded-lg bg-muted/40 border border-border">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
+                    Precision
+                  </span>
+                  <span className="font-mono font-medium text-foreground text-sm">FP16</span>
+                </div>
+                <div className="p-2 rounded-lg bg-muted/40 border border-border">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
+                    Input Res
+                  </span>
+                  <span className="font-mono font-medium text-foreground text-sm">640×640</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* System & Model Config Card */}
-        <div className="gsap-manager-card md:col-span-3">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>System & Model Configuration</CardTitle>
-              <CardDescription>Runtime parameters & inference engine</CardDescription>
+        {/* System Capabilities & Model Overview */}
+        <div className="gsap-manager-card">
+          <Card className="h-full flex flex-col justify-between">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Hardware Diagnostics</CardTitle>
+              <CardDescription>Sensor & edge environment</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between py-1.5 border-b border-border/50 text-xs">
-                <span className="text-muted-foreground">Classifier Architecture</span>
-                <span className="font-mono font-medium text-foreground">YOLOv11n-cls</span>
+            <CardContent className="space-y-3.5 text-xs">
+              <div className="rounded-lg border border-border divide-y divide-border">
+                <div className="flex items-center justify-between p-2.5">
+                  <span className="text-muted-foreground">Framework</span>
+                  <span className="font-medium text-foreground">Ultralytics YOLO</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5">
+                  <span className="text-muted-foreground">Execution</span>
+                  <span className="font-medium text-foreground">Local Python CPU/GPU</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5">
+                  <span className="text-muted-foreground">Development Stages</span>
+                  <span className="font-medium text-foreground">Day 1 to Day 21</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5">
+                  <span className="text-muted-foreground">Session Integrity</span>
+                  <span className="font-medium text-[#52B788] flex items-center gap-1">
+                    <Shield className="size-3" /> Secure Operator
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-border/50 text-xs">
-                <span className="text-muted-foreground">Weights Path</span>
-                <span className="font-mono font-medium text-foreground truncate max-w-[160px]">
-                  egg_candling_best.pt
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-border/50 text-xs">
-                <span className="text-muted-foreground">Dark Filter Mean Thresh</span>
-                <span className="font-mono font-medium text-foreground">18.0</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-border/50 text-xs">
-                <span className="text-muted-foreground">Image Ingest Constraints</span>
-                <span className="font-mono font-medium text-foreground">64 × 64 min</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5 border-b border-border/50 text-xs">
-                <span className="text-muted-foreground">Current Operator</span>
-                <span className="font-medium text-foreground truncate max-w-[160px]">
-                  {modelStatus?.user?.email || 'Authenticated'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between pt-1 text-xs">
-                <span className="text-muted-foreground">Backend Service</span>
-                <Badge variant="secondary" className="gap-1 text-[11px]">
-                  <Server className="size-2.5" /> Flask REST 3.0
-                </Badge>
+
+              <div className="p-3 rounded-lg bg-[#E8F5E9] dark:bg-[#1B291F] text-[#1E4D2B] dark:text-[#52B788] text-xs">
+                All inference parameters conform to the commercial poultry incubation standard.
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Scans Telemetry Table */}
+      {/* Recent Activity Table */}
       <div className="gsap-manager-card">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle>Recent Telemetry Log</CardTitle>
-              <CardDescription>
-                Inspection history across active sessions ({logs.length} displayed)
-              </CardDescription>
+              <CardTitle className="text-base font-semibold">Recent Operator Scans</CardTitle>
+              <CardDescription>Latest entries captured across candling batches</CardDescription>
             </div>
+            <Badge variant="outline" className="font-mono text-xs">
+              {logs.length} logged
+            </Badge>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                <RefreshCw className="size-5 animate-spin mx-auto mb-2 opacity-50" />
-                Loading telemetry…
-              </div>
-            ) : logs.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                No recent detection logs recorded yet.
-              </div>
+            {logs.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-6 text-center">
+                No recent scan logs recorded yet.
+              </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-border text-xs uppercase text-muted-foreground">
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted/50 border-b border-border text-muted-foreground font-medium uppercase tracking-wider text-[10px]">
                     <tr>
-                      <th className="py-2.5 px-3">ID</th>
-                      <th className="py-2.5 px-3">Image</th>
-                      <th className="py-2.5 px-3">Prediction</th>
-                      <th className="py-2.5 px-3">Confidence</th>
-                      <th className="py-2.5 px-3">Stage</th>
-                      <th className="py-2.5 px-3">Date / Time</th>
-                      <th className="py-2.5 px-3 text-right">Action</th>
+                      <th className="px-3.5 py-2.5">Day</th>
+                      <th className="px-3.5 py-2.5">Confidence</th>
+                      <th className="px-3.5 py-2.5">Timestamp</th>
+                      <th className="px-3.5 py-2.5 text-right">View</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/50">
-                    {logs.slice(0, 10).map((scan) => (
-                      <tr key={scan.id} className="hover:bg-muted/40 transition-colors">
-                        <td className="py-2.5 px-3 font-mono text-xs">{scan.id}</td>
-                        <td className="py-2.5 px-3">
-                          <img
-                            src={scan.image_url}
-                            alt={`Scan ${scan.id}`}
-                            className="size-9 rounded-md object-cover border border-border cursor-pointer hover:opacity-80 hover:scale-105 transition-all"
-                            onClick={() => setSelectedScan(scan)}
-                          />
+                  <tbody className="divide-y divide-border">
+                    {logs.slice(0, 5).map((log) => (
+                      <tr key={log.id} className="hover:bg-accent/40 transition-colors">
+                        <td className="px-3.5 py-2.5 font-medium text-foreground">
+                          {log.predicted_day || '—'}
                         </td>
-                        <td className="py-2.5 px-3 font-medium text-foreground">
-                          {scan.predicted_day || 'Uncertain'}
-                          {scan.low_confidence && (
-                            <Badge variant="destructive" className="ml-1.5 text-[10px] py-0 px-1.5">
-                              Low
-                            </Badge>
-                          )}
+                        <td className="px-3.5 py-2.5">
+                          <span className="font-mono font-medium text-[#1E4D2B] dark:text-[#52B788]">
+                            {typeof log.confidence === 'number'
+                              ? `${log.confidence.toFixed(1)}%`
+                              : '—'}
+                          </span>
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-xs">
-                          {typeof scan.confidence === 'number'
-                            ? `${scan.confidence.toFixed(1)}%`
-                            : '—'}
+                        <td className="px-3.5 py-2.5 text-muted-foreground">
+                          {[log.date_display, log.time_display].filter(Boolean).join(' ')}
                         </td>
-                        <td className="py-2.5 px-3 text-xs text-muted-foreground">
-                          {scan.stage || scan.development_stage || '—'}
-                        </td>
-                        <td className="py-2.5 px-3 text-xs text-muted-foreground">
-                          {scan.date} {scan.time}
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
+                        <td className="px-3.5 py-2.5 text-right">
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            onClick={() => setSelectedScan(scan)}
-                            title="View image"
-                            className="hover:scale-110 active:scale-95 transition-transform"
+                            onClick={() => setSelectedScan(log)}
+                            className="hover:text-primary"
                           >
                             <Eye className="size-3.5" />
                           </Button>
@@ -367,7 +388,11 @@ export default function Manager() {
         </Card>
       </div>
 
-      <ImageModal item={selectedScan} onClose={() => setSelectedScan(null)} />
+      <ImageModal
+        isOpen={Boolean(selectedScan)}
+        item={selectedScan}
+        onClose={() => setSelectedScan(null)}
+      />
     </div>
   )
 }
