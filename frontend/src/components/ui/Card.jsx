@@ -10,7 +10,7 @@ export const Card = React.forwardRef(({ className, size = 'default', ...props },
       '--card-spacing': size === 'sm' ? '1rem' : '1.5rem',
     }}
     className={cn(
-      'rounded-xl border border-border bg-card text-card-foreground shadow-xs ring-1 ring-foreground/10 overflow-hidden',
+      'rounded-xl border border-border bg-card text-card-foreground shadow-[0_4px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all',
       className,
     )}
     {...props}
@@ -89,5 +89,3 @@ export function Stat({ value, caption, tone = '' }) {
     </div>
   )
 }
-
-export default Card
