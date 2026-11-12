@@ -124,7 +124,58 @@ created_at      timestamptz not null default now()
 Images are stored in the `egg-images` bucket as
 `<Day_N | unassigned>/<timestamp>_<id>.jpg`.
 
-## 8. Tests
+## 8. Training in Google Colab
+
+The backend expects an Ultralytics YOLO classification model saved at `models/egg_candling_best.pt` with classes named `Day_1` through `Day_21`.
+
+### Dataset structure
+Organize your images by day:
+```text
+dataset/
+├── Day_1/
+│   ├── img01.jpg
+│   └── ...
+├── Day_2/
+└── ...
+└── Day_21/
+```
+
+### Colab workflow
+1. **Prepare dataset split (80% train / 20% val)**:
+   - Run `training/prepare_dataset.py` locally or in Colab. It validates image formats/corruptions and generates:
+     ```text
+     yolo_dataset/
+     ├── train/
+     │   ├── Day_1/ ... Day_21/
+     └── val/
+         ├── Day_1/ ... Day_21/
+     ```
+2. **Zip & upload to Colab**:
+   Zip `yolo_dataset` or mount Google Drive.
+3. **Train in Colab (GPU runtime)**:
+   ```python
+   !pip install ultralytics
+
+   from ultralytics import YOLO
+
+   # Base classification model (e.g. yolo11n-cls.pt or yolov8n-cls.pt)
+   model = YOLO("yolo11n-cls.pt")
+
+   # Train on GPU
+   results = model.train(
+       data="/content/yolo_dataset",
+       epochs=50,
+       imgsz=224,
+       batch=32,
+       device=0,
+       name="egg_candling"
+   )
+   ```
+4. **Deploy weights**:
+   - Download `runs/classify/egg_candling/weights/best.pt`.
+   - Place it into this project at: `models/egg_candling_best.pt`.
+
+## 9. Tests
 
 ```bash
 python -m pytest tests/ -q
