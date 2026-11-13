@@ -141,11 +141,27 @@ def _verify_token():
     if not SUPABASE_JWT_SECRET:
         return None, ("Server not configured: SUPABASE_JWT_SECRET is missing", 503)
     try:
-        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated",
+        )
     except jwt.ExpiredSignatureError:
         return None, ("Token expired", 401)
+    except jwt.InvalidAudienceError:
+        return None, ("Invalid token audience", 401)
     except jwt.InvalidTokenError as error:
         return None, (f"Invalid token: {error}", 401)
+
+    # Verify issuer against Supabase project URL (accept both base URL and
+    # /auth/v1 suffix, since Supabase's issuer format can vary by deployment).
+    issuer = payload.get("iss")
+    if issuer and SUPABASE_URL:
+        expected_issuers = {SUPABASE_URL, f"{SUPABASE_URL}/auth/v1"}
+        if issuer not in expected_issuers:
+            return None, ("Invalid token issuer", 401)
+
     user_id = payload.get("sub")
     if not user_id:
         return None, ("Token has no subject (sub) claim", 401)
