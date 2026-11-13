@@ -16,7 +16,7 @@ import {
 } from '../components/ui/Card'
 import { ModeToggle } from '../components/ui/ModeToggle'
 import Logo from '../components/Logo'
-import eggPosterImage from '../images/egg_background.jpg'
+import loginPageImage from '../images/loginPageImage.png'
 
 export default function Login() {
   const { session, loading, signIn } = useAuth()
@@ -25,7 +25,6 @@ export default function Login() {
 
   const leftPanelRef = React.useRef(null)
   const formCardRef = React.useRef(null)
-  const videoRef = React.useRef(null)
 
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
@@ -60,15 +59,6 @@ export default function Login() {
     }
   })
 
-  // Ensure video playback starts smoothly on mount
-  React.useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Autoplay policy fallback: muted video is already compliant
-      })
-    }
-  }, [])
-
   // Already signed in? Go straight to the app.
   if (!loading && session) {
     return <Navigate to="/" replace />
@@ -95,23 +85,17 @@ export default function Login() {
         <ModeToggle />
       </div>
 
-      {/* LEFT PANEL: Responsive Agribusiness Visual & Branding Container with UHD Video */}
+      {/* LEFT PANEL: Responsive Agribusiness Visual & Branding Container */}
       <div
         ref={leftPanelRef}
         className="relative w-full lg:w-1/2 min-h-[460px] sm:min-h-[520px] lg:min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden bg-[#0A1A0F] text-white"
       >
-        {/* Seamless Looping Background Video */}
-        <video
-          ref={videoRef}
-          autoPlay
-          loop
-          muted
-          playsInline
-          poster={eggPosterImage}
+        {/* Background Image */}
+        <img
+          src={loginPageImage}
+          alt="Egg Candling Intelligence"
           className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none scale-105"
-        >
-          <source src="/egg_candling_bg.mp4" type="video/mp4" />
-        </video>
+        />
 
         {/* Natural Atmospheric Vignette Overlay for rich contrast & readability */}
         <div
