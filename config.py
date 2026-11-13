@@ -1,5 +1,6 @@
 """Shared paths and settings for the egg candling system."""
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,7 +23,8 @@ def resolve_dataset_dir() -> Path:
 DATASET_DIR = resolve_dataset_dir()
 YOLO_DATASET_DIR = BASE_DIR / "yolo_dataset"
 MODELS_DIR = BASE_DIR / "models"
-MODEL_PATH = MODELS_DIR / "egg_candling_best.pt"
+_MODEL_PATH_ENV = os.environ.get("MODEL_PATH", "").strip()
+MODEL_PATH = Path(_MODEL_PATH_ENV) if _MODEL_PATH_ENV else MODELS_DIR / "egg_candling_best.pt"
 CAPTURED_DIR = DATASET_DIR / "captured"
 DB_PATH = BASE_DIR / "egg_candling.db"
 RUNS_DIR = BASE_DIR / "runs"
@@ -31,7 +33,10 @@ RUNS_DIR = BASE_DIR / "runs"
 PRETRAINED_CLS_MODEL = "yolo11n-cls.pt"
 FALLBACK_PRETRAINED_CLS_MODEL = "yolov8n-cls.pt"
 
-MIN_CONFIDENCE = 0.60
+try:
+    MIN_CONFIDENCE = float(os.environ.get("MIN_CONFIDENCE", "0.60"))
+except (TypeError, ValueError):
+    MIN_CONFIDENCE = 0.60
 MIN_IMAGE_WIDTH = 64
 MIN_IMAGE_HEIGHT = 64
 DARK_MEAN_THRESHOLD = 18.0
