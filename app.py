@@ -57,6 +57,36 @@ else:
     # Local dev fallback for the Vite dev server.
     ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+try:
+    FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+except AttributeError:
+    FLASK_DEBUG = False
+
+
+def _validate_startup() -> None:
+    """Fail fast if required backend configuration is missing.
+
+    Messages name the missing variable only — never its value.
+    """
+    missing = []
+    if not SUPABASE_URL:
+        missing.append("SUPABASE_URL")
+    if not SUPABASE_SERVICE_KEY:
+        missing.append("SUPABASE_SERVICE_KEY")
+    if not SUPABASE_JWT_SECRET:
+        missing.append("SUPABASE_JWT_SECRET")
+    if missing:
+        names = ", ".join(missing)
+        raise RuntimeError(
+            f"Missing required backend configuration: {names}. "
+            "Copy .env.example to .env and fill in the values."
+        )
+    if not _origins_raw:
+        print(
+            "WARNING: ALLOWED_ORIGINS is not set. "
+            "CORS will only allow http://localhost:5173 and http://127.0.0.1:5173."
+        )
+
 app = Flask(__name__)
 CORS(
     app,
@@ -582,6 +612,7 @@ def restore_log(log_id: int):
 # Startup
 # ------------------------------------------------------------------
 if __name__ == "__main__":
+    _validate_startup()
     print("======================================")
     print(" CHICKEN EGG CANDLING API (Supabase)")
     print("======================================")
@@ -591,5 +622,5 @@ if __name__ == "__main__":
     print(f"JWT secret    : {'set' if SUPABASE_JWT_SECRET else '(not set)'}")
     print(f"CORS origins  : {', '.join(ALLOWED_ORIGINS)}")
     print("======================================")
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=FLASK_DEBUG)
 
