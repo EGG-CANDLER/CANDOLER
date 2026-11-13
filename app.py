@@ -26,6 +26,8 @@ import numpy as np
 import requests
 from flask import Flask, g, jsonify, request
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from PIL import Image, UnidentifiedImageError
 
 from config import (
@@ -62,6 +64,27 @@ try:
 except AttributeError:
     FLASK_DEBUG = False
 
+# Rate limit for POST /api/analyze (configurable via env var, e.g. "30/minute")
+ANALYZE_RATE_LIMIT = os.environ.get("ANALYZE_RATE_LIMIT", "30/minute")
+
+
+def _rate_limit_key() -> str:
+    """Use authenticated user_id when available, fall back to client IP."""
+    try:
+        user = g.get("user")
+        if user and user.get("user_id"):
+            return f"user:{user['user_id']}"
+    except Exception:
+        pass
+    return f"ip:{get_remote_address()}"
+
+
+limiter = Limiter(
+    key_func=_rate_limit_key,
+    storage_uri="memory://",
+    default_limits=[],
+)
+
 
 def _validate_startup() -> None:
     """Fail fast if required backend configuration is missing.
@@ -95,6 +118,7 @@ CORS(
     methods=["GET", "POST", "OPTIONS"],
     supports_credentials=False,
 )
+limiter.init_app(app)
 
 
 # ------------------------------------------------------------------
@@ -143,6 +167,17 @@ def auth_required(func):
 
 def _current_user_id() -> str:
     return g.user["user_id"]
+
+
+@app.errorhandler(429)
+def _rate_limit_exceeded(error):
+    return jsonify(
+        {
+            "success": False,
+            "code": "RATE_LIMIT_EXCEEDED",
+            "message": "Too many analyze requests. Please slow down and try again later.",
+        }
+    ), 429
 
 
 # ------------------------------------------------------------------
@@ -417,6 +452,7 @@ def api_status():
 
 @app.post("/api/analyze")
 @auth_required
+@limiter.limit(ANALYZE_RATE_LIMIT)
 def api_analyze():
     """Validate + predict + upload to Storage + insert log — in ONE request."""
     payload = request.get_json(silent=True) or {}
