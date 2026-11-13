@@ -32,6 +32,8 @@ from PIL import Image, UnidentifiedImageError
 
 from config import (
     DARK_MEAN_THRESHOLD,
+    MAX_IMAGE_BYTES,
+    MAX_IMAGE_DIMENSION,
     MIN_CONFIDENCE,
     MIN_IMAGE_HEIGHT,
     MIN_IMAGE_WIDTH,
@@ -331,6 +333,11 @@ def validate_image_bytes(image_bytes: bytes):
     warnings: list[str] = []
     if not image_bytes:
         raise ValueError("Image is empty")
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise ValueError(
+            f"Image is too large ({len(image_bytes)} bytes). "
+            f"Maximum allowed size is {MAX_IMAGE_BYTES} bytes."
+        )
     try:
         image = Image.open(BytesIO(image_bytes))
         image.load()
@@ -342,6 +349,11 @@ def validate_image_bytes(image_bytes: bytes):
         raise ValueError(
             f"Image is too small ({width}x{height}). "
             f"Need at least {MIN_IMAGE_WIDTH}x{MIN_IMAGE_HEIGHT}."
+        )
+    if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+        raise ValueError(
+            f"Image dimensions too large ({width}x{height}). "
+            f"Maximum allowed dimension is {MAX_IMAGE_DIMENSION}px."
         )
 
     rgb = image.convert("RGB")

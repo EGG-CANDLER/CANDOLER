@@ -42,6 +42,16 @@ MIN_IMAGE_HEIGHT = 64
 DARK_MEAN_THRESHOLD = 18.0
 LOW_PIXEL_COUNT_THRESHOLD = 100
 
+# Maximum allowed image size (configurable via env vars)
+try:
+    MAX_IMAGE_BYTES = int(os.environ.get("MAX_IMAGE_BYTES", "5242880"))  # 5 MB default
+except (TypeError, ValueError):
+    MAX_IMAGE_BYTES = 5242880
+try:
+    MAX_IMAGE_DIMENSION = int(os.environ.get("MAX_IMAGE_DIMENSION", "4096"))  # 4096 px default
+except (TypeError, ValueError):
+    MAX_IMAGE_DIMENSION = 4096
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 DAY_CLASS_PREFIX = "Day_"
 EXPECTED_DAYS = list(range(1, 22))
