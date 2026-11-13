@@ -27,7 +27,14 @@ def client(monkeypatch):
 
 def _auth(user_id: str = "user-1") -> dict:
     token = pyjwt.encode(
-        {"sub": user_id, "email": "u@example.com"}, TEST_SECRET, algorithm="HS256"
+        {
+            "sub": user_id,
+            "email": "u@example.com",
+            "aud": "authenticated",
+            "iss": "https://test.supabase.co",
+        },
+        TEST_SECRET,
+        algorithm="HS256",
     )
     return {"Authorization": f"Bearer {token}"}
 
