@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import base64
 import os
-import tempfile
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -392,17 +391,10 @@ def _to_jpeg(rgb: Image.Image) -> bytes:
 
 
 def _predict_from_bytes(jpeg_bytes: bytes) -> dict:
-    """predict.py reads from a path, so stage the bytes in a temp file."""
-    fd, path = tempfile.mkstemp(suffix=".jpg")
-    with os.fdopen(fd, "wb") as handle:
-        handle.write(jpeg_bytes)
-    try:
-        return predict_image(path)
-    finally:
-        try:
-            os.unlink(path)
-        except OSError:
-            pass
+    """Run YOLO prediction directly from image bytes via PIL (no temp file)."""
+    image = Image.open(BytesIO(jpeg_bytes))
+    image.load()
+    return predict_image(image)
 
 
 # ------------------------------------------------------------------
