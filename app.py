@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import base64
 import os
-import tempfile
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -26,10 +25,14 @@ import numpy as np
 import requests
 from flask import Flask, g, jsonify, request
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from PIL import Image, UnidentifiedImageError
 
 from config import (
     DARK_MEAN_THRESHOLD,
+    MAX_IMAGE_BYTES,
+    MAX_IMAGE_DIMENSION,
     MIN_CONFIDENCE,
     MIN_IMAGE_HEIGHT,
     MIN_IMAGE_WIDTH,
@@ -57,6 +60,57 @@ else:
     # Local dev fallback for the Vite dev server.
     ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+try:
+    FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+except AttributeError:
+    FLASK_DEBUG = False
+
+# Rate limit for POST /api/analyze (configurable via env var, e.g. "30/minute")
+ANALYZE_RATE_LIMIT = os.environ.get("ANALYZE_RATE_LIMIT", "30/minute")
+
+
+def _rate_limit_key() -> str:
+    """Use authenticated user_id when available, fall back to client IP."""
+    try:
+        user = g.get("user")
+        if user and user.get("user_id"):
+            return f"user:{user['user_id']}"
+    except Exception:
+        pass
+    return f"ip:{get_remote_address()}"
+
+
+limiter = Limiter(
+    key_func=_rate_limit_key,
+    storage_uri="memory://",
+    default_limits=[],
+)
+
+
+def _validate_startup() -> None:
+    """Fail fast if required backend configuration is missing.
+
+    Messages name the missing variable only — never its value.
+    """
+    missing = []
+    if not SUPABASE_URL:
+        missing.append("SUPABASE_URL")
+    if not SUPABASE_SERVICE_KEY:
+        missing.append("SUPABASE_SERVICE_KEY")
+    if not SUPABASE_JWT_SECRET:
+        missing.append("SUPABASE_JWT_SECRET")
+    if missing:
+        names = ", ".join(missing)
+        raise RuntimeError(
+            f"Missing required backend configuration: {names}. "
+            "Copy .env.example to .env and fill in the values."
+        )
+    if not _origins_raw:
+        print(
+            "WARNING: ALLOWED_ORIGINS is not set. "
+            "CORS will only allow http://localhost:5173 and http://127.0.0.1:5173."
+        )
+
 app = Flask(__name__)
 CORS(
     app,
@@ -65,6 +119,7 @@ CORS(
     methods=["GET", "POST", "OPTIONS"],
     supports_credentials=False,
 )
+limiter.init_app(app)
 
 
 # ------------------------------------------------------------------
@@ -85,11 +140,27 @@ def _verify_token():
     if not SUPABASE_JWT_SECRET:
         return None, ("Server not configured: SUPABASE_JWT_SECRET is missing", 503)
     try:
-        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated",
+        )
     except jwt.ExpiredSignatureError:
         return None, ("Token expired", 401)
+    except jwt.InvalidAudienceError:
+        return None, ("Invalid token audience", 401)
     except jwt.InvalidTokenError as error:
         return None, (f"Invalid token: {error}", 401)
+
+    # Verify issuer against Supabase project URL (accept both base URL and
+    # /auth/v1 suffix, since Supabase's issuer format can vary by deployment).
+    issuer = payload.get("iss")
+    if issuer and SUPABASE_URL:
+        expected_issuers = {SUPABASE_URL, f"{SUPABASE_URL}/auth/v1"}
+        if issuer not in expected_issuers:
+            return None, ("Invalid token issuer", 401)
+
     user_id = payload.get("sub")
     if not user_id:
         return None, ("Token has no subject (sub) claim", 401)
@@ -113,6 +184,17 @@ def auth_required(func):
 
 def _current_user_id() -> str:
     return g.user["user_id"]
+
+
+@app.errorhandler(429)
+def _rate_limit_exceeded(error):
+    return jsonify(
+        {
+            "success": False,
+            "code": "RATE_LIMIT_EXCEEDED",
+            "message": "Too many analyze requests. Please slow down and try again later.",
+        }
+    ), 429
 
 
 # ------------------------------------------------------------------
@@ -266,6 +348,11 @@ def validate_image_bytes(image_bytes: bytes):
     warnings: list[str] = []
     if not image_bytes:
         raise ValueError("Image is empty")
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise ValueError(
+            f"Image is too large ({len(image_bytes)} bytes). "
+            f"Maximum allowed size is {MAX_IMAGE_BYTES} bytes."
+        )
     try:
         image = Image.open(BytesIO(image_bytes))
         image.load()
@@ -277,6 +364,11 @@ def validate_image_bytes(image_bytes: bytes):
         raise ValueError(
             f"Image is too small ({width}x{height}). "
             f"Need at least {MIN_IMAGE_WIDTH}x{MIN_IMAGE_HEIGHT}."
+        )
+    if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+        raise ValueError(
+            f"Image dimensions too large ({width}x{height}). "
+            f"Maximum allowed dimension is {MAX_IMAGE_DIMENSION}px."
         )
 
     rgb = image.convert("RGB")
@@ -299,17 +391,10 @@ def _to_jpeg(rgb: Image.Image) -> bytes:
 
 
 def _predict_from_bytes(jpeg_bytes: bytes) -> dict:
-    """predict.py reads from a path, so stage the bytes in a temp file."""
-    fd, path = tempfile.mkstemp(suffix=".jpg")
-    with os.fdopen(fd, "wb") as handle:
-        handle.write(jpeg_bytes)
-    try:
-        return predict_image(path)
-    finally:
-        try:
-            os.unlink(path)
-        except OSError:
-            pass
+    """Run YOLO prediction directly from image bytes via PIL (no temp file)."""
+    image = Image.open(BytesIO(jpeg_bytes))
+    image.load()
+    return predict_image(image)
 
 
 # ------------------------------------------------------------------
@@ -387,6 +472,7 @@ def api_status():
 
 @app.post("/api/analyze")
 @auth_required
+@limiter.limit(ANALYZE_RATE_LIMIT)
 def api_analyze():
     """Validate + predict + upload to Storage + insert log — in ONE request."""
     payload = request.get_json(silent=True) or {}
@@ -582,6 +668,7 @@ def restore_log(log_id: int):
 # Startup
 # ------------------------------------------------------------------
 if __name__ == "__main__":
+    _validate_startup()
     print("======================================")
     print(" CHICKEN EGG CANDLING API (Supabase)")
     print("======================================")
@@ -591,5 +678,5 @@ if __name__ == "__main__":
     print(f"JWT secret    : {'set' if SUPABASE_JWT_SECRET else '(not set)'}")
     print(f"CORS origins  : {', '.join(ALLOWED_ORIGINS)}")
     print("======================================")
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=FLASK_DEBUG)
 

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PIL import Image
+
 from config import MODEL_PATH, MIN_CONFIDENCE, display_day_name
 from stage_mapping import get_development_stage
 
@@ -76,13 +78,15 @@ def _top_predictions(result, limit: int = 3) -> list[dict]:
     return top
 
 
-def predict_image(image_path: str | Path, min_confidence: float = MIN_CONFIDENCE) -> dict:
-    path = Path(image_path)
-    if not path.is_file():
-        raise FileNotFoundError(f"Image not found: {path}")
-
+def predict_image(image_path: str | Path | Image.Image, min_confidence: float = MIN_CONFIDENCE) -> dict:
     model = load_model()
-    results = model.predict(source=str(path), verbose=False)
+    if isinstance(image_path, Image.Image):
+        results = model.predict(source=image_path, verbose=False)
+    else:
+        path = Path(image_path)
+        if not path.is_file():
+            raise FileNotFoundError(f"Image not found: {path}")
+        results = model.predict(source=str(path), verbose=False)
     if not results:
         raise RuntimeError("YOLO returned no result for this image.")
 

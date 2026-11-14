@@ -4,10 +4,10 @@ const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!url || !anonKey) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY — copy frontend/.env.example to frontend/.env',
+  throw new Error(
+    'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. ' +
+    'Copy frontend/.env.example to frontend/.env and fill in the values.'
   )
 }
 
-export const supabase = createClient(url ?? '', anonKey ?? '')
+export const supabase = createClient(url, anonKey)

@@ -15,6 +15,12 @@ day (1–21) and development stage from a candled egg image.
 | `training/` | Dataset prep + training scripts (**not deployed**) |
 | `tests/` | A couple of API tests |
 
+## Setup
+
+1. Copy `backend` environment: `cp .env.example .env` and fill in `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, and `ALLOWED_ORIGINS`. Optional: `MODEL_PATH`, `MIN_CONFIDENCE`, `FLASK_DEBUG`.
+2. Copy `frontend` environment: `cp frontend/.env.example frontend/.env` and fill in `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`.
+3. In Supabase, run `supabase/schema.sql` in the SQL Editor and enable Email/Password auth.
+
 ## 1. Supabase setup
 
 1. Create a Supabase project.
@@ -88,16 +94,16 @@ provides the SPA rewrite for client-side routes.
 
 All `/api/*` routes require `Authorization: Bearer <Supabase access token>`.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | API index (no auth) |
-| GET | `/api/status` | Model + Supabase status |
-| POST | `/api/analyze` | Validate → predict → upload image → insert log (one request) |
-| GET | `/api/logs` | Active logs (`day`, `date`, `page`, `per_page`) |
-| GET | `/api/archives` | Archived logs (same filters) |
-| GET | `/api/logs/<id>` | Single log detail |
-| POST | `/api/logs/<id>/archive` | Archive a log |
-| POST | `/api/logs/<id>/restore` | Restore an archived log |
+| Method | Path | Auth required? | Description |
+|--------|------|----------------|-------------|
+| GET | `/` | No | API index |
+| GET | `/api/status` | Yes | Model + Supabase status |
+| POST | `/api/analyze` | Yes | Validate → predict → upload image → insert log (one request) |
+| GET | `/api/logs` | Yes | Active logs (`day`, `date`, `page`, `per_page`) |
+| GET | `/api/archives` | Yes | Archived logs (same filters) |
+| GET | `/api/logs/<id>` | Yes | Single log detail |
+| POST | `/api/logs/<id>/archive` | Yes | Archive a log |
+| POST | `/api/logs/<id>/restore` | Yes | Restore an archived log |
 
 `POST /api/analyze` request: `{ "image": "data:image/jpeg;base64,..." }` →
 response includes `predicted_day`, `stage`, `confidence`, `top_predictions`,
