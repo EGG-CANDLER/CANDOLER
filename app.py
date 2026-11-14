@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import base64
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -477,7 +479,7 @@ def api_status():
 
 @app.post("/api/analyze")
 @auth_required
-@limiter.limit(ANALYZE_RATE_LIMIT)
+@limiter.limit(lambda: ANALYZE_RATE_LIMIT)
 def api_analyze():
     """Validate + predict + upload to Storage + insert log — in ONE request."""
     payload = request.get_json(silent=True) or {}
