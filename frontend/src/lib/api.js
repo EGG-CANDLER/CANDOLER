@@ -18,7 +18,7 @@ function handleSessionExpired() {
   try {
     supabase.auth.signOut({ scope: 'local' })
   } catch {}
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
     window.location.assign('/login?session_expired=true')
   }
 }
