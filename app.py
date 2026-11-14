@@ -133,12 +133,12 @@ def _extract_token() -> str | None:
 
 
 def _verify_token():
-    """Return (user, None) on success, or (None, (message, http_code)) on failure."""
+    """Return (user, None) on success, or (None, (response_dict, http_code)) on failure."""
     token = _extract_token()
     if not token:
-        return None, ("Missing bearer token", 401)
+        return None, ({"error": "token_missing", "message": "Missing bearer token"}, 401)
     if not SUPABASE_JWT_SECRET:
-        return None, ("Server not configured: SUPABASE_JWT_SECRET is missing", 503)
+        return None, ({"error": "server_misconfigured", "message": "Server not configured: SUPABASE_JWT_SECRET is missing"}, 503)
     try:
         payload = jwt.decode(
             token,
@@ -147,11 +147,11 @@ def _verify_token():
             audience="authenticated",
         )
     except jwt.ExpiredSignatureError:
-        return None, ("Token expired", 401)
+        return None, ({"error": "token_expired", "message": "Token expired"}, 401)
     except jwt.InvalidAudienceError:
-        return None, ("Invalid token audience", 401)
+        return None, ({"error": "token_invalid", "message": "Invalid token audience"}, 401)
     except jwt.InvalidTokenError as error:
-        return None, (f"Invalid token: {error}", 401)
+        return None, ({"error": "token_invalid", "message": f"Invalid token: {error}"}, 401)
 
     # Verify issuer against Supabase project URL (accept both base URL and
     # /auth/v1 suffix, since Supabase's issuer format can vary by deployment).
@@ -159,11 +159,11 @@ def _verify_token():
     if issuer and SUPABASE_URL:
         expected_issuers = {SUPABASE_URL, f"{SUPABASE_URL}/auth/v1"}
         if issuer not in expected_issuers:
-            return None, ("Invalid token issuer", 401)
+            return None, ({"error": "token_invalid", "message": "Invalid token issuer"}, 401)
 
     user_id = payload.get("sub")
     if not user_id:
-        return None, ("Token has no subject (sub) claim", 401)
+        return None, ({"error": "token_invalid", "message": "Token has no subject (sub) claim"}, 401)
     return {"user_id": user_id, "email": payload.get("email")}, None
 
 
@@ -172,10 +172,15 @@ def auth_required(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
+        if request.method == "OPTIONS":
+            return func(*args, **kwargs)
         user, error = _verify_token()
         if error:
-            message, code = error
-            return jsonify({"success": False, "message": message}), code
+            error_data, code = error
+            return jsonify({
+                "success": False,
+                **error_data,
+            }), code
         g.user = user
         return func(*args, **kwargs)
 
