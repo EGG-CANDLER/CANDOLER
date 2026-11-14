@@ -5,13 +5,26 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replac
   '',
 )
 
-async function getToken() {
-  const { data } = await supabase.auth.getSession()
-  return data?.session?.access_token ?? null
+async function getFreshToken() {
+  try {
+    const { data } = await supabase.auth.getSession()
+    return data?.session?.access_token ?? null
+  } catch {
+    return null
+  }
 }
 
-async function request(path, { method = 'GET', body, params } = {}) {
-  const token = await getToken()
+function handleSessionExpired() {
+  try {
+    supabase.auth.signOut({ scope: 'local' })
+  } catch {}
+  if (typeof window !== 'undefined') {
+    window.location.assign('/login?session_expired=true')
+  }
+}
+
+async function request(path, { method = 'GET', body, params, timeout = 30000, isRetry = false } = {}) {
+  const token = await getFreshToken()
   const url = new URL(API_URL + path)
 
   if (params) {
@@ -25,11 +38,55 @@ async function request(path, { method = 'GET', body, params } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const response = await fetch(url.toString(), {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  let response
+  try {
+    response = await fetch(url.toString(), {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+  } catch (err) {
+    if (err.name === 'AbortError' || controller.signal.aborted) {
+      const timeoutError = new Error('The server took too long to respond.')
+      timeoutError.code = 'TIMEOUT'
+      throw timeoutError
+    }
+    const netError = new Error('Cannot reach the server.')
+    netError.code = 'NETWORK_ERROR'
+    netError.cause = err
+    throw netError
+  } finally {
+    clearTimeout(timeoutId)
+  }
+
+  // Handle 401: try refreshing session once and retrying
+  if (response.status === 401) {
+    if (!isRetry) {
+      let refreshSuccess = false
+      try {
+        const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession()
+        if (!refreshErr && refreshData?.session?.access_token) {
+          refreshSuccess = true
+        }
+      } catch {
+        refreshSuccess = false
+      }
+
+      if (refreshSuccess) {
+        return request(path, { method, body, params, timeout, isRetry: true })
+      }
+    }
+
+    // Refresh failed or retry failed: sign out locally and redirect
+    handleSessionExpired()
+    const sessionError = new Error('Your session expired. Please log in again.')
+    sessionError.status = 401
+    throw sessionError
+  }
 
   let data = null
   try {
@@ -39,19 +96,26 @@ async function request(path, { method = 'GET', body, params } = {}) {
   }
 
   if (!response.ok) {
-    const error = new Error(data?.message || `Request failed (${response.status})`)
+    const message =
+      (data && (data.message || data.error)) ||
+      `Request failed (${response.status})`
+    const error = new Error(message)
     error.status = response.status
+    error.data = data
     throw error
   }
   return data
 }
 
 export const api = {
-  status: () => request('/api/status'),
-  analyze: (image) => request('/api/analyze', { method: 'POST', body: { image } }),
-  logs: (params) => request('/api/logs', { params }),
-  archives: (params) => request('/api/archives', { params }),
-  logDetail: (id) => request(`/api/logs/${id}`),
-  archiveLog: (id) => request(`/api/logs/${id}/archive`, { method: 'POST' }),
-  restoreLog: (id) => request(`/api/logs/${id}/restore`, { method: 'POST' }),
+  status: (options) => request('/api/status', options),
+  analyze: (image, options) =>
+    request('/api/analyze', { method: 'POST', body: { image }, ...options }),
+  logs: (params, options) => request('/api/logs', { params, ...options }),
+  archives: (params, options) => request('/api/archives', { params, ...options }),
+  logDetail: (id, options) => request(`/api/logs/${id}`, options),
+  archiveLog: (id, options) =>
+    request(`/api/logs/${id}/archive`, { method: 'POST', ...options }),
+  restoreLog: (id, options) =>
+    request(`/api/logs/${id}/restore`, { method: 'POST', ...options }),
 }
