@@ -43,6 +43,7 @@ from config import (
 from predict import (
     MODEL_MISSING_MESSAGE,
     ModelNotTrainedError,
+    load_model,
     model_is_ready,
     predict_image,
 )
@@ -428,6 +429,10 @@ def validate_image_bytes(image_bytes: bytes):
             f"Maximum allowed dimension is {MAX_IMAGE_DIMENSION}px."
         )
 
+    # Downscale image if larger than 1024px to prevent OOM on memory-constrained servers
+    if width > 1024 or height > 1024:
+        image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+
     rgb = image.convert("RGB")
     array = np.asarray(rgb, dtype=np.float32)
     if array.size == 0:
@@ -513,6 +518,13 @@ def home():
 
 @app.get("/api/status")
 def api_status():
+    ready = model_is_ready()
+    if ready:
+        try:
+            load_model()
+        except Exception:
+            pass
+
     user = None
     token = _extract_token()
     if token and SUPABASE_JWT_SECRET:

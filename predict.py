@@ -38,6 +38,11 @@ def load_model():
         return _model
 
     from ultralytics import YOLO
+    try:
+        import torch
+        torch.set_num_threads(1)
+    except Exception:
+        pass
 
     try:
         _model = YOLO(str(MODEL_PATH))
