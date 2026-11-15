@@ -97,7 +97,19 @@ export default function Dashboard() {
 
   // Model readiness banner
   React.useEffect(() => {
-    api.status().then(setModelStatus).catch(() => {})
+    let isMounted = true
+    api
+      .status()
+      .then((res) => {
+        if (isMounted) setModelStatus(res)
+      })
+      .catch(() => {
+        if (isMounted) setModelStatus({ model_ready: false })
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   // Camera enumerate
