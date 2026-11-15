@@ -94,15 +94,15 @@ export default function Manager() {
   return (
     <div ref={managerRef} className="flex flex-col gap-6">
       {/* Page Header with Farm Header Banner Preview */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
               Manager Console
             </h1>
             <Badge
               variant={modelReady ? 'leaf' : 'secondary'}
-              className="gap-1.5 text-xs py-0.5"
+              className="gap-1.5 text-[10px] sm:text-xs py-0.5"
             >
               <span
                 className={`size-2 rounded-full ${
@@ -112,7 +112,7 @@ export default function Manager() {
               {modelReady ? 'Online' : 'Offline'}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             System diagnostics, YOLO pipeline latency, and inspection performance.
           </p>
         </div>
@@ -123,7 +123,7 @@ export default function Manager() {
             size="sm"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="gap-1.5"
+            className="gap-1.5 min-h-[44px] sm:min-h-0"
           >
             <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh Diagnostics
@@ -132,19 +132,19 @@ export default function Manager() {
       </div>
 
       {/* Farm Inspection Module Banner */}
-      <div className="gsap-manager-card relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="gsap-manager-card relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-5 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 sm:gap-6">
         <div className="max-w-xl">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#1E4D2B] dark:text-[#52B788] block mb-1">
             Hatchery Unit Diagnostics
           </span>
-          <h2 className="text-xl font-bold text-foreground">
+          <h2 className="text-lg sm:text-xl font-bold text-foreground">
             Precision Candling & Hardware Telemetry
           </h2>
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
             Direct interface into local edge inference metrics, camera frames, and database batch archiving records.
           </p>
         </div>
-        <div className="w-full sm:w-64 h-24 rounded-lg overflow-hidden border border-border shrink-0 shadow-xs">
+        <div className="w-full md:w-64 h-24 sm:h-28 rounded-lg overflow-hidden border border-border shrink-0 shadow-xs">
           <img
             src={farmHeaderBanner}
             alt="Farm eggs on table"
@@ -342,46 +342,78 @@ export default function Manager() {
                 No recent scan logs recorded yet.
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-muted/50 border-b border-border text-muted-foreground font-medium uppercase tracking-wider text-[10px]">
-                    <tr>
-                      <th className="px-3.5 py-2.5">Day</th>
-                      <th className="px-3.5 py-2.5">Confidence</th>
-                      <th className="px-3.5 py-2.5">Timestamp</th>
-                      <th className="px-3.5 py-2.5 text-right">View</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {logs.slice(0, 5).map((log) => (
-                      <tr key={log.id} className="hover:bg-accent/40 transition-colors">
-                        <td className="px-3.5 py-2.5 font-medium text-foreground">
-                          {log.predicted_day || '—'}
-                        </td>
-                        <td className="px-3.5 py-2.5">
-                          <span className="font-mono font-medium text-[#1E4D2B] dark:text-[#52B788]">
-                            {typeof log.confidence === 'number'
-                              ? `${log.confidence.toFixed(1)}%`
-                              : '—'}
-                          </span>
-                        </td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">
-                          {[log.date_display, log.time_display].filter(Boolean).join(' ')}
-                        </td>
-                        <td className="px-3.5 py-2.5 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => setSelectedScan(log)}
-                            className="hover:text-primary"
-                          >
-                            <Eye className="size-3.5" />
-                          </Button>
-                        </td>
+              <div>
+                {/* Desktop / Tablet Table View */}
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-muted/50 border-b border-border text-muted-foreground font-medium uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="px-3.5 py-2.5">Day</th>
+                        <th className="px-3.5 py-2.5">Confidence</th>
+                        <th className="px-3.5 py-2.5">Timestamp</th>
+                        <th className="px-3.5 py-2.5 text-right">View</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {logs.slice(0, 5).map((log) => (
+                        <tr key={log.id} className="hover:bg-accent/40 transition-colors">
+                          <td className="px-3.5 py-2.5 font-medium text-foreground">
+                            {log.predicted_day || '—'}
+                          </td>
+                          <td className="px-3.5 py-2.5">
+                            <span className="font-mono font-medium text-[#1E4D2B] dark:text-[#52B788]">
+                              {typeof log.confidence === 'number'
+                                ? `${log.confidence.toFixed(1)}%`
+                                : '—'}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-muted-foreground">
+                            {[log.date_display, log.time_display].filter(Boolean).join(' ')}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => setSelectedScan(log)}
+                              className="hover:text-primary min-h-[36px] min-w-[36px]"
+                            >
+                              <Eye className="size-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View (<640px) */}
+                <div className="sm:hidden divide-y divide-border rounded-lg border border-border overflow-hidden">
+                  {logs.slice(0, 5).map((log) => (
+                    <div key={log.id} className="p-3 space-y-1.5 hover:bg-accent/30 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs text-foreground">
+                          {log.predicted_day || '—'}
+                        </span>
+                        <span className="font-mono text-xs font-semibold text-[#1E4D2B] dark:text-[#52B788]">
+                          {typeof log.confidence === 'number'
+                            ? `${log.confidence.toFixed(1)}%`
+                            : '—'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>{[log.date_display, log.time_display].filter(Boolean).join(' ')}</span>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => setSelectedScan(log)}
+                          className="gap-1 min-h-[36px] text-xs px-2"
+                        >
+                          <Eye className="size-3.5" /> View
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
