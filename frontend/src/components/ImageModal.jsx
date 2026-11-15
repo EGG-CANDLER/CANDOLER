@@ -13,15 +13,15 @@ export default function ImageModal({ item, onClose }) {
 
   return (
     <Dialog open={Boolean(item)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl p-6">
+      <DialogContent className="w-[calc(100%-1.5rem)] max-w-xl p-4 sm:p-6">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <DialogTitle>Scan #{item.id}</DialogTitle>
-            <Badge variant="secondary" className="font-mono text-xs">
+          <div className="flex items-center gap-2 pr-8 sm:pr-0">
+            <DialogTitle className="truncate">Scan #{item.id}</DialogTitle>
+            <Badge variant="secondary" className="font-mono text-xs shrink-0">
               {item.predicted_day || 'Uncertain'}
             </Badge>
           </div>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm text-left">
             {item.date} at {item.time} &middot; Stage: {item.stage || item.development_stage || 'Not specified'}
           </DialogDescription>
         </DialogHeader>
@@ -34,7 +34,7 @@ export default function ImageModal({ item, onClose }) {
           />
         </div>
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-xs text-muted-foreground pt-2 border-t border-border/50">
           <span>
             Confidence:{' '}
             <strong className="text-foreground font-mono">
