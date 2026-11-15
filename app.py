@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import base64
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -123,8 +125,19 @@ limiter.init_app(app)
 
 
 # ------------------------------------------------------------------
-# Authentication (Supabase JWT)
+# Authentication (Supabase JWT with JWKS & Secret Support)
 # ------------------------------------------------------------------
+_jwk_client = None
+
+
+def _get_jwk_client():
+    global _jwk_client
+    if _jwk_client is None and SUPABASE_URL:
+        jwks_url = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+        _jwk_client = jwt.PyJWKClient(jwks_url, timeout=10)
+    return _jwk_client
+
+
 def _extract_token() -> str | None:
     header = request.headers.get("Authorization", "")
     if header[:7].lower() == "bearer ":
@@ -133,37 +146,76 @@ def _extract_token() -> str | None:
 
 
 def _verify_token():
-    """Return (user, None) on success, or (None, (message, http_code)) on failure."""
+    """Return (user, None) on success, or (None, (response_dict, http_code)) on failure."""
     token = _extract_token()
     if not token:
-        return None, ("Missing bearer token", 401)
-    if not SUPABASE_JWT_SECRET:
-        return None, ("Server not configured: SUPABASE_JWT_SECRET is missing", 503)
-    try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-    except jwt.ExpiredSignatureError:
-        return None, ("Token expired", 401)
-    except jwt.InvalidAudienceError:
-        return None, ("Invalid token audience", 401)
-    except jwt.InvalidTokenError as error:
-        return None, (f"Invalid token: {error}", 401)
+        app.logger.warning("Auth failed: Missing bearer token")
+        return None, ({"error": "token_missing", "message": "Missing bearer token"}, 401)
 
-    # Verify issuer against Supabase project URL (accept both base URL and
-    # /auth/v1 suffix, since Supabase's issuer format can vary by deployment).
+    try:
+        header = jwt.get_unverified_header(token)
+        token_alg = header.get("alg", "HS256")
+        kid = header.get("kid")
+    except Exception as e:
+        app.logger.warning(f"Could not parse token header: {e}")
+        token_alg = "HS256"
+        kid = None
+
+    payload = None
+    # 1. Asymmetric token (ES256 / RS256) -> verify against Supabase JWKS public keys
+    if token_alg in ["ES256", "RS256"]:
+        try:
+            jwk_client = _get_jwk_client()
+            if jwk_client:
+                signing_key = jwk_client.get_signing_key_from_jwt(token)
+                payload = jwt.decode(
+                    token,
+                    signing_key.key,
+                    algorithms=[token_alg],
+                    audience="authenticated",
+                )
+        except jwt.PyJWTError as e:
+            app.logger.warning(f"Auth failed: Asymmetric verification failed ({e})")
+            return None, ({"error": "token_invalid", "message": f"Invalid token: {e}"}, 401)
+        except Exception as e:
+            app.logger.warning(f"Auth failed: JWKS fetch failed ({e})")
+
+    # 2. Symmetric token (HS256 / HS384 / HS512) or fallback -> verify with SUPABASE_JWT_SECRET
+    if payload is None:
+        if not SUPABASE_JWT_SECRET:
+            app.logger.error("Auth failed: SUPABASE_JWT_SECRET is missing")
+            return None, ({"error": "server_misconfigured", "message": "Server not configured: SUPABASE_JWT_SECRET is missing"}, 503)
+
+        try:
+            allowed_algs = ["HS256", "HS384", "HS512"]
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=allowed_algs,
+                audience="authenticated",
+            )
+        except jwt.ExpiredSignatureError:
+            app.logger.warning("Auth failed: Token expired")
+            return None, ({"error": "token_expired", "message": "Token expired"}, 401)
+        except jwt.InvalidAudienceError as err:
+            app.logger.warning(f"Auth failed: Invalid audience ({err})")
+            return None, ({"error": "token_invalid", "message": f"Invalid token audience: {err}"}, 401)
+        except jwt.InvalidTokenError as error:
+            app.logger.warning(f"Auth failed: Invalid token ({error})")
+            return None, ({"error": "token_invalid", "message": f"Invalid token: {error}"}, 401)
+
+    # Verify issuer against Supabase project URL (accept base URL, /auth/v1 suffix, or 'supabase')
     issuer = payload.get("iss")
     if issuer and SUPABASE_URL:
-        expected_issuers = {SUPABASE_URL, f"{SUPABASE_URL}/auth/v1"}
+        expected_issuers = {SUPABASE_URL, f"{SUPABASE_URL}/auth/v1", "supabase"}
         if issuer not in expected_issuers:
-            return None, ("Invalid token issuer", 401)
+            app.logger.warning(f"Auth failed: Invalid issuer '{issuer}'. Expected one of {expected_issuers}")
+            return None, ({"error": "token_invalid", "message": f"Invalid token issuer: {issuer}"}, 401)
 
     user_id = payload.get("sub")
     if not user_id:
-        return None, ("Token has no subject (sub) claim", 401)
+        app.logger.warning("Auth failed: Token has no subject claim")
+        return None, ({"error": "token_invalid", "message": "Token has no subject (sub) claim"}, 401)
     return {"user_id": user_id, "email": payload.get("email")}, None
 
 
@@ -172,10 +224,15 @@ def auth_required(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
+        if request.method == "OPTIONS":
+            return func(*args, **kwargs)
         user, error = _verify_token()
         if error:
-            message, code = error
-            return jsonify({"success": False, "message": message}), code
+            error_data, code = error
+            return jsonify({
+                "success": False,
+                **error_data,
+            }), code
         g.user = user
         return func(*args, **kwargs)
 
@@ -455,8 +512,21 @@ def home():
 
 
 @app.get("/api/status")
-@auth_required
 def api_status():
+    user = None
+    token = _extract_token()
+    if token and SUPABASE_JWT_SECRET:
+        try:
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256"],
+                audience="authenticated",
+            )
+            user = {"user_id": payload.get("sub"), "email": payload.get("email")}
+        except jwt.PyJWTError:
+            pass
+
     return jsonify(
         {
             "success": True,
@@ -465,14 +535,14 @@ def api_status():
             "model_message": None if model_is_ready() else MODEL_MISSING_MESSAGE,
             "min_confidence": MIN_CONFIDENCE,
             "supabase_configured": _supabase_configured(),
-            "user": g.user,
+            "user": user,
         }
     )
 
 
 @app.post("/api/analyze")
 @auth_required
-@limiter.limit(ANALYZE_RATE_LIMIT)
+@limiter.limit(lambda: ANALYZE_RATE_LIMIT)
 def api_analyze():
     """Validate + predict + upload to Storage + insert log — in ONE request."""
     payload = request.get_json(silent=True) or {}

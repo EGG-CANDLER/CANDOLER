@@ -17,6 +17,20 @@ import app as app_module
 TEST_SECRET = "unit-test-secret"
 
 
+class _Resp:
+    def __init__(self, payload, headers=None, status: int = 200):
+        self._payload = payload
+        self.headers = headers or {}
+        self.status_code = status
+
+    def json(self):
+        return self._payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
 def _make_token(extra_claims: dict | None = None) -> str:
     claims = {
         "sub": "user-1",

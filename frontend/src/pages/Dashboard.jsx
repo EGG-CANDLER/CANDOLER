@@ -97,7 +97,19 @@ export default function Dashboard() {
 
   // Model readiness banner
   React.useEffect(() => {
-    api.status().then(setModelStatus).catch(() => {})
+    let isMounted = true
+    api
+      .status()
+      .then((res) => {
+        if (isMounted) setModelStatus(res)
+      })
+      .catch(() => {
+        if (isMounted) setModelStatus({ model_ready: false })
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   // Camera enumerate
@@ -172,6 +184,7 @@ export default function Dashboard() {
   }
 
   async function analyze(dataUrl) {
+    if (!dataUrl) return
     setPreview(dataUrl)
     setResult(null)
     setError('')
@@ -180,33 +193,61 @@ export default function Dashboard() {
       const res = await api.analyze(dataUrl)
       setResult(res)
     } catch (err) {
-      setError((err && err.message) || 'Analysis failed.')
+      const msg = (err && err.message) || 'Analysis failed.'
+      setError(`Analysis failed: ${msg}. Try again.`)
     } finally {
       setAnalyzing(false)
     }
   }
 
   function handleCapture() {
-    const video = videoRef.current
-    if (!video || !video.videoWidth) {
-      setError('Camera video is not ready yet.')
-      return
+    try {
+      const video = videoRef.current
+      if (!video || !video.videoWidth) {
+        setError('Camera video is not ready yet.')
+        return
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+      analyze(dataUrl)
+    } catch (err) {
+      setError(`Capture failed: ${err?.message || 'Unknown error'}. Try again.`)
+      setAnalyzing(false)
     }
-    const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
-    analyze(canvas.toDataURL('image/jpeg', 0.92))
   }
 
   function handleFile(event) {
-    const file = event.target.files && event.target.files[0]
-    event.target.value = ''
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => analyze(reader.result)
-    reader.onerror = () => setError('Could not read the selected file.')
-    reader.readAsDataURL(file)
+    try {
+      const file = event.target.files && event.target.files[0]
+      event.target.value = ''
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          analyze(reader.result)
+        } catch (err) {
+          setError(`File processing failed: ${err?.message || 'Unknown error'}. Try again.`)
+          setAnalyzing(false)
+        }
+      }
+      reader.onerror = () => {
+        setError('Could not read the selected file.')
+        setAnalyzing(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (err) {
+      setError(`File upload failed: ${err?.message || 'Unknown error'}. Try again.`)
+      setAnalyzing(false)
+    }
+  }
+
+  function handleRetry() {
+    if (preview) {
+      analyze(preview)
+    }
   }
 
   const lowConfidence = Boolean(result && result.low_confidence)
@@ -466,7 +507,22 @@ export default function Dashboard() {
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="size-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
+                    <span>{error}</span>
+                    {preview && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        onClick={handleRetry}
+                        disabled={analyzing}
+                        className="bg-background text-foreground border-border hover:bg-accent"
+                      >
+                        <RefreshCw className="size-3 mr-1" />
+                        Retry
+                      </Button>
+                    )}
+                  </AlertDescription>
                 </Alert>
               )}
 

@@ -29,7 +29,18 @@ export default function Login() {
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [error, setError] = React.useState('')
+  const [infoMessage, setInfoMessage] = React.useState('')
   const [submitting, setSubmitting] = React.useState(false)
+
+  React.useEffect(() => {
+    const state = location.state
+    const query = new URLSearchParams(location.search)
+    if (state?.sessionExpired || query.get('session_expired') === 'true' || state?.message) {
+      setInfoMessage(
+        state?.message || 'Your session expired. Please log in again.'
+      )
+    }
+  }, [location])
 
   // GSAP entrance animation on load
   useGSAP(() => {
@@ -175,6 +186,13 @@ export default function Login() {
             </CardHeader>
 
             <CardContent>
+              {infoMessage && (
+                <Alert className="mb-5 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                  <AlertCircle className="size-4 text-amber-600 dark:text-amber-400" />
+                  <AlertDescription>{infoMessage}</AlertDescription>
+                </Alert>
+              )}
+
               {error && (
                 <Alert variant="destructive" className="mb-5">
                   <AlertCircle className="size-4" />
