@@ -23,7 +23,7 @@ function handleSessionExpired() {
   }
 }
 
-async function request(path, { method = 'GET', body, params, timeout = 30000, isRetry = false } = {}) {
+async function request(path, { method = 'GET', body, params, timeout = 30000, isRetry = false, skipAuthRedirect = false } = {}) {
   const token = await getFreshToken()
   const url = new URL(API_URL + path)
 
@@ -77,12 +77,14 @@ async function request(path, { method = 'GET', body, params, timeout = 30000, is
       }
 
       if (refreshSuccess) {
-        return request(path, { method, body, params, timeout, isRetry: true })
+        return request(path, { method, body, params, timeout, isRetry: true, skipAuthRedirect })
       }
     }
 
-    // Refresh failed or retry failed: sign out locally and redirect
-    handleSessionExpired()
+    // Refresh failed or retry failed: sign out locally and redirect only if not skipped
+    if (!skipAuthRedirect) {
+      handleSessionExpired()
+    }
     const sessionError = new Error('Your session expired. Please log in again.')
     sessionError.status = 401
     throw sessionError
@@ -108,7 +110,7 @@ async function request(path, { method = 'GET', body, params, timeout = 30000, is
 }
 
 export const api = {
-  status: (options) => request('/api/status', options),
+  status: (options) => request('/api/status', { skipAuthRedirect: true, ...options }),
   analyze: (image, options) =>
     request('/api/analyze', { method: 'POST', body: { image }, ...options }),
   logs: (params, options) => request('/api/logs', { params, ...options }),
