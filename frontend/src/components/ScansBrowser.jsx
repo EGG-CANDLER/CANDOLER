@@ -148,10 +148,10 @@ export default function ScansBrowser({ mode }) {
   return (
     <div ref={browserRef} className="flex flex-col gap-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{description}</p>
         </div>
 
         <Button
@@ -159,7 +159,7 @@ export default function ScansBrowser({ mode }) {
           size="sm"
           onClick={load}
           disabled={loading}
-          className="self-start sm:self-auto gap-1.5"
+          className="self-start sm:self-auto gap-1.5 min-h-[44px] sm:min-h-0"
         >
           <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -171,7 +171,7 @@ export default function ScansBrowser({ mode }) {
         <CardContent className="p-4 sm:p-5">
           <form
             onSubmit={handleFilterSubmit}
-            className="flex flex-col sm:flex-row flex-wrap items-end gap-3.5"
+            className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3.5"
           >
             <div className="space-y-1.5 flex-1 min-w-[140px]">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -181,7 +181,7 @@ export default function ScansBrowser({ mode }) {
               <select
                 value={day}
                 onChange={(e) => setDay(e.target.value)}
-                className="w-full text-xs h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full text-base sm:text-xs h-10 sm:h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">All Days</option>
                 {DAYS.map((d) => (
@@ -201,12 +201,13 @@ export default function ScansBrowser({ mode }) {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full text-xs h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
+                className="w-full text-base sm:text-xs h-10 sm:h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+              </input>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button type="submit" variant="default" size="sm">
+            <div className="flex items-center gap-2 pt-1 sm:pt-0">
+              <Button type="submit" variant="default" size="sm" className="flex-1 sm:flex-initial min-h-[44px] sm:min-h-0">
                 Apply Filters
               </Button>
               {(appliedDay || appliedDate) && (
@@ -215,7 +216,7 @@ export default function ScansBrowser({ mode }) {
                   variant="ghost"
                   size="sm"
                   onClick={handleReset}
-                  className="gap-1 text-xs"
+                  className="gap-1 text-xs min-h-[44px] sm:min-h-0"
                 >
                   <RotateCcw className="size-3" /> Reset
                 </Button>
@@ -269,68 +270,118 @@ export default function ScansBrowser({ mode }) {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-muted/40 border-y border-border text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="px-4 py-3">Day</th>
-                    <th className="px-4 py-3">Stage</th>
-                    <th className="px-4 py-3">Confidence</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Time</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {logs.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="gsap-table-row hover:bg-accent/40 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-semibold text-foreground">
-                        {item.predicted_day || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {item.stage || '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-mono font-medium text-[#1E4D2B] dark:text-[#52B788]">
-                          {confidenceText(item.confidence)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {item.date_display || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground font-mono">
-                        {item.time_display || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => setModalItem(item)}
-                            title="View image and analysis"
-                            className="hover:text-primary"
-                          >
-                            <Eye className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            disabled={busyId === item.id}
-                            onClick={() => handleToggleArchive(item)}
-                            title={isArchived ? 'Restore to logs' : 'Archive record'}
-                            className="hover:text-primary"
-                          >
-                            <Archive className="size-3.5" />
-                          </Button>
-                        </div>
-                      </td>
+            <div>
+              {/* Desktop & Tablet Table View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted/40 border-y border-border text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-4 py-3">Day</th>
+                      <th className="px-4 py-3">Stage</th>
+                      <th className="px-4 py-3">Confidence</th>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Time</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {logs.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="gsap-table-row hover:bg-accent/40 transition-colors"
+                      >
+                        <td className="px-4 py-3 font-semibold text-foreground">
+                          {item.predicted_day || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {item.stage || '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-mono font-medium text-[#1E4D2B] dark:text-[#52B788]">
+                            {confidenceText(item.confidence)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {item.date_display || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground font-mono">
+                          {item.time_display || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => setModalItem(item)}
+                              title="View image and analysis"
+                              className="hover:text-primary min-h-[36px] min-w-[36px]"
+                            >
+                              <Eye className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              disabled={busyId === item.id}
+                              onClick={() => handleToggleArchive(item)}
+                              title={isArchived ? 'Restore to logs' : 'Archive record'}
+                              className="hover:text-primary min-h-[36px] min-w-[36px]"
+                            >
+                              <Archive className="size-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Stacked Card View (<640px) */}
+              <div className="sm:hidden divide-y divide-border">
+                {logs.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 space-y-2 hover:bg-accent/30 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-sm text-foreground">
+                        {item.predicted_day || '—'}
+                      </span>
+                      <span className="font-mono font-semibold text-xs text-[#1E4D2B] dark:text-[#52B788] bg-muted/60 px-2 py-0.5 rounded">
+                        {confidenceText(item.confidence)}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground flex items-center justify-between">
+                      <span className="truncate max-w-[60%]">{item.stage || '—'}</span>
+                      <span className="text-[11px] font-mono">
+                        {[item.date_display, item.time_display].filter(Boolean).join(' ')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/50">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setModalItem(item)}
+                        className="gap-1 min-h-[36px] text-xs px-2.5"
+                      >
+                        <Eye className="size-3.5" /> View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        disabled={busyId === item.id}
+                        onClick={() => handleToggleArchive(item)}
+                        className="gap-1 min-h-[36px] text-xs px-2.5"
+                      >
+                        <Archive className="size-3.5" />
+                        {isArchived ? 'Restore' : 'Archive'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
