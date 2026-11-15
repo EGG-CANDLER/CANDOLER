@@ -217,62 +217,69 @@ export default function Layout() {
       {/* Main Content Area (SidebarInset) */}
       <SidebarInset>
         {/* Sticky Header: clean off-white / white surface */}
-        <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-md border-b border-border max-w-360 w-full mx-auto px-4 sm:px-6 h-14 flex items-center justify-between transition-colors">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-md border-b border-border max-w-360 w-full mx-auto px-3 sm:px-6 h-14 flex items-center justify-between transition-colors">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <SidebarTrigger />
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold text-foreground truncate">
                 {currentPageTitle}
               </span>
-              <Badge variant="leaf" className="hidden sm:inline-flex text-[11px] py-0 px-2 gap-1.5">
+              <Badge variant="leaf" className="hidden sm:inline-flex text-[11px] py-0 px-2 gap-1.5 shrink-0">
                 <span className="size-1.5 rounded-full bg-[#52B788] animate-pulse" /> Live System
               </Badge>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <ModeToggle />
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="hidden sm:inline-flex text-xs h-8 hover:border-destructive/40 hover:text-destructive transition-colors"
+              className="text-xs h-9 min-h-[44px] sm:min-h-0 sm:h-8 px-2.5 sm:px-3 hover:border-destructive/40 hover:text-destructive transition-colors"
             >
-              Log out
+              <LogOut className="size-3.5 sm:hidden" />
+              <span className="hidden sm:inline">Log out</span>
             </Button>
           </div>
         </header>
 
         {/* Content Body */}
-        <div ref={contentRef} className="flex-1 p-4 sm:p-6 max-w-360 w-full mx-auto">
+        <div ref={contentRef} className="flex-1 p-3.5 sm:p-6 max-w-360 w-full mx-auto min-w-0">
           <Outlet />
         </div>
 
         {/* Footer */}
         <footer ref={footerRef} className="mt-auto border-t border-border bg-card/60 py-5">
-          <div className="max-w-360 container mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2 text-center sm:text-left">
+          <div className="max-w-360 container mx-auto px-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground text-center sm:text-left">
+            <div className="flex items-center gap-2 justify-center sm:justify-start">
               <Logo size={18} />
-              <span>
-                CANDOLER &copy; 2026 &mdash; AI-Powered Poultry Incubation & Development Intelligence
+              <span className="leading-tight">
+                CANDOLER &copy; 2026 &mdash; AI Poultry Intelligence
               </span>
             </div>
-            <div className="flex items-center gap-4 text-center sm:text-right">
+            <div className="flex flex-wrap items-center justify-center gap-4">
               <NavLink
                 to="/"
-                className="transition-colors hover:text-foreground hover:underline underline-offset-4"
+                className="py-1 px-1.5 transition-colors hover:text-foreground hover:underline underline-offset-4"
               >
                 Scanner
               </NavLink>
               <NavLink
                 to="/logs"
-                className="transition-colors hover:text-foreground hover:underline underline-offset-4"
+                className="py-1 px-1.5 transition-colors hover:text-foreground hover:underline underline-offset-4"
               >
                 Logs
               </NavLink>
               <NavLink
+                to="/archives"
+                className="py-1 px-1.5 transition-colors hover:text-foreground hover:underline underline-offset-4"
+              >
+                Archive
+              </NavLink>
+              <NavLink
                 to="/manager"
-                className="transition-colors hover:text-foreground hover:underline underline-offset-4"
+                className="py-1 px-1.5 transition-colors hover:text-foreground hover:underline underline-offset-4"
               >
                 Manager
               </NavLink>
