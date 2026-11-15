@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { supabase } from '../lib/supabase'
 
@@ -19,7 +19,30 @@ function isInvalidRefreshTokenError(err) {
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Fetch the user's profile row from public.profiles (RLS-scoped)
+  const fetchProfile = useCallback(async (userId) => {
+    if (!userId) { setProfile(null); return }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url, created_at')
+        .eq('id', userId)
+        .single()
+      if (error) {
+        // Profile row may not exist yet (trigger hasn't fired); not fatal
+        console.warn('Profile fetch warning:', error.message)
+        setProfile(null)
+      } else {
+        setProfile(data)
+      }
+    } catch (err) {
+      console.error('Profile fetch error:', err)
+      setProfile(null)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -30,16 +53,15 @@ export function AuthProvider({ children }) {
         if (error) {
           if (isInvalidRefreshTokenError(error)) {
             await supabase.auth.signOut({ scope: 'local' })
-            if (active) {
-              setSession(null)
-              setLoading(false)
-            }
+            if (active) { setSession(null); setProfile(null); setLoading(false) }
             return
           }
           console.error('Failed to get session:', error)
         }
+        const sess = data?.session ?? null
         if (active) {
-          setSession(data?.session ?? null)
+          setSession(sess)
+          if (sess?.user) await fetchProfile(sess.user.id)
           setLoading(false)
         }
       } catch (err) {
@@ -49,10 +71,7 @@ export function AuthProvider({ children }) {
             await supabase.auth.signOut({ scope: 'local' })
           }
         } catch {}
-        if (active) {
-          setSession(null)
-          setLoading(false)
-        }
+        if (active) { setSession(null); setProfile(null); setLoading(false) }
       }
     }
 
@@ -62,28 +81,22 @@ export function AuthProvider({ children }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (event === 'SIGNED_OUT') {
-        if (active) {
-          setSession(null)
-          setLoading(false)
-        }
+        if (active) { setSession(null); setProfile(null); setLoading(false) }
         return
       }
 
       if (event === 'TOKEN_REFRESHED') {
         if (!nextSession) {
-          try {
-            await supabase.auth.signOut({ scope: 'local' })
-          } catch {}
-          if (active) {
-            setSession(null)
-            setLoading(false)
-          }
+          try { await supabase.auth.signOut({ scope: 'local' }) } catch {}
+          if (active) { setSession(null); setProfile(null); setLoading(false) }
           return
         }
       }
 
       if (active) {
         setSession(nextSession ?? null)
+        if (nextSession?.user) await fetchProfile(nextSession.user.id)
+        else setProfile(null)
         setLoading(false)
       }
     })
@@ -92,18 +105,31 @@ export function AuthProvider({ children }) {
       active = false
       subscription?.unsubscribe()
     }
-  }, [])
+  }, [fetchProfile])
 
   const value = useMemo(
     () => ({
       session,
       user: session?.user ?? null,
+      profile,
       loading,
       signIn: (email, password) =>
         supabase.auth.signInWithPassword({ email, password }),
+      signUp: (email, password) =>
+        supabase.auth.signUp({ email, password }),
+      signInAnonymously: () =>
+        supabase.auth.signInAnonymously(),
+      signInWithOAuth: (provider = 'google') =>
+        supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+          },
+        }),
       signOut: () => supabase.auth.signOut(),
+      refreshProfile: () => fetchProfile(session?.user?.id),
     }),
-    [session, loading],
+    [session, profile, loading, fetchProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
