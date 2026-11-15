@@ -30,9 +30,9 @@ const sheetVariants = cva(
         top: 'inset-x-0 top-0 border-b border-border data-closed:slide-out-to-top data-open:slide-in-from-top',
         bottom:
           'inset-x-0 bottom-0 border-t border-border data-closed:slide-out-to-bottom data-open:slide-in-from-bottom',
-        left: 'inset-y-0 left-0 h-full w-3/4 border-r border-border sm:max-w-sm data-closed:slide-out-to-left data-open:slide-in-from-left',
+        left: 'inset-y-0 left-0 h-full w-[min(18rem,85vw)] max-w-[85vw] border-r border-border data-closed:slide-out-to-left data-open:slide-in-from-left',
         right:
-          'inset-y-0 right-0 h-full w-3/4 border-l border-border sm:max-w-sm data-closed:slide-out-to-right data-open:slide-in-from-right data-starting-style:opacity-0 data-ending-style:opacity-0 data-[side=right]:data-ending-style:translate-x-[2.5rem]',
+          'inset-y-0 right-0 h-full w-[min(18rem,85vw)] max-w-[85vw] border-l border-border data-closed:slide-out-to-right data-open:slide-in-from-right data-starting-style:opacity-0 data-ending-style:opacity-0 data-[side=right]:data-ending-style:translate-x-[2.5rem]',
       },
     },
     defaultVariants: {
@@ -52,8 +52,8 @@ export const SheetContent = React.forwardRef(
         {...props}
       >
         {children}
-        <BaseDialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none cursor-pointer">
-          <X className="size-4" />
+        <BaseDialog.Close className="absolute right-4 top-4 rounded-sm p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none cursor-pointer">
+          <X className="size-5" />
           <span className="sr-only">Close</span>
         </BaseDialog.Close>
       </BaseDialog.Popup>
