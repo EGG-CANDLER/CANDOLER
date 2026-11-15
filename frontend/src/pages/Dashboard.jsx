@@ -305,28 +305,28 @@ export default function Dashboard() {
   return (
     <div ref={dashboardRef} className="flex flex-col gap-6">
       {/* Agribusiness Section Hero Banner Card */}
-      <div className="gsap-card relative overflow-hidden rounded-xl border border-border bg-card p-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="gsap-card relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 sm:gap-6">
         <div className="relative z-10 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#E8F5E9] dark:bg-[#1B291F] text-[#1E4D2B] dark:text-[#52B788] text-xs font-medium mb-3">
-            <CheckCircle2 className="size-3.5" />
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#E8F5E9] dark:bg-[#1B291F] text-[#1E4D2B] dark:text-[#52B788] text-xs font-medium mb-2.5 sm:mb-3">
+            <CheckCircle2 className="size-3.5 shrink-0" />
             Poultry Incubation Quality Control
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
             Egg Candling & Embryo Development
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
             Real-time optical density candling analysis. Capture or upload egg candling images to determine incubation age and embryonic viability.
           </p>
         </div>
 
         {/* Hero Visual Asset preview card */}
-        <div className="relative z-10 w-full sm:w-72 shrink-0 rounded-lg overflow-hidden border border-border shadow-xs bg-muted/40">
+        <div className="relative z-10 w-full md:w-72 shrink-0 rounded-lg overflow-hidden border border-border shadow-xs bg-muted/40">
           <img
             src={heroEggBanner}
             alt="Candled Egg Sample"
-            className="w-full h-28 object-cover object-center"
+            className="w-full h-24 sm:h-28 object-cover object-center"
           />
-          <div className="p-2.5 bg-card flex items-center justify-between">
+          <div className="p-2 sm:p-2.5 bg-card flex items-center justify-between">
             <span className="text-xs font-semibold text-foreground">Active Calibration</span>
             <span className="text-[11px] font-medium text-[#1E4D2B] dark:text-[#52B788]">
               YOLO v11 Candler
@@ -410,11 +410,11 @@ export default function Dashboard() {
 
               {/* Camera selector & action buttons */}
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                <div className="flex items-center gap-2 flex-1 max-w-xs">
+                <div className="flex items-center gap-2 w-full sm:w-auto sm:max-w-xs">
                   <select
                     value={deviceId}
                     onChange={handleSelectCamera}
-                    className="w-full text-xs h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full text-base sm:text-xs h-10 sm:h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">
                       {cameras.length ? 'Default camera' : 'No camera detected'}
@@ -433,7 +433,7 @@ export default function Dashboard() {
                       variant="default"
                       size="sm"
                       onClick={handleStart}
-                      className="gap-1.5"
+                      className="gap-1.5 flex-1 sm:flex-initial min-h-[44px] sm:min-h-0"
                     >
                       <Camera className="size-3.5" /> Start camera
                     </Button>
@@ -442,6 +442,7 @@ export default function Dashboard() {
                       variant="destructive"
                       size="sm"
                       onClick={stopCamera}
+                      className="flex-1 sm:flex-initial min-h-[44px] sm:min-h-0"
                     >
                       Stop
                     </Button>
@@ -453,7 +454,7 @@ export default function Dashboard() {
                     onClick={handleSwitch}
                     disabled={!stream}
                     title="Switch camera"
-                    className="transition-transform duration-200 active:scale-95"
+                    className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 transition-transform duration-200 active:scale-95"
                   >
                     <RefreshCw className="size-3.5" />
                   </Button>
@@ -463,15 +464,15 @@ export default function Dashboard() {
                     size="sm"
                     onClick={handleCapture}
                     disabled={!stream || analyzing}
-                    className="gap-1.5 font-medium shadow-xs"
+                    className="gap-1.5 font-medium shadow-xs flex-1 sm:flex-initial min-h-[44px] sm:min-h-0"
                   >
                     <Sparkles className="size-3.5 text-primary-foreground" />
                     {analyzing ? 'Analyzing…' : 'Capture & analyze'}
                   </Button>
 
-                  <label className="inline-flex cursor-pointer">
+                  <label className="inline-flex cursor-pointer flex-1 sm:flex-initial">
                     <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
-                    <span className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-all">
+                    <span className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 text-xs font-medium text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-all">
                       <Upload className="size-3.5" /> Upload
                     </span>
                   </label>
@@ -707,28 +708,28 @@ export default function Dashboard() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4 py-2">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-muted/40 p-2.5 border border-border">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-muted/40 p-2 sm:p-2.5 border border-border">
                   <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                     Day
                   </span>
-                  <span className="text-lg font-bold text-foreground">
+                  <span className="text-base sm:text-lg font-bold text-foreground">
                     {result?.predicted_day?.replace(/^Day\s*/i, '') || '—'}
                   </span>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5 border border-border">
+                <div className="rounded-lg bg-muted/40 p-2 sm:p-2.5 border border-border">
                   <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                     Stage
                   </span>
-                  <span className="text-lg font-bold text-foreground truncate block">
+                  <span className="text-base sm:text-lg font-bold text-foreground truncate block">
                     {result?.stage ? result.stage.split(' ')[0] : '—'}
                   </span>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5 border border-border">
+                <div className="rounded-lg bg-muted/40 p-2 sm:p-2.5 border border-border">
                   <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                     Conf
                   </span>
-                  <span className="text-lg font-bold text-foreground">
+                  <span className="text-base sm:text-lg font-bold text-foreground">
                     {confidence === null ? (
                       '—'
                     ) : (

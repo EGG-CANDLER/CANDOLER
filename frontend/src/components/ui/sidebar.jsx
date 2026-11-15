@@ -8,7 +8,7 @@ import { Sheet, SheetContent } from './sheet'
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = '16rem'
-const SIDEBAR_WIDTH_MOBILE = '18rem'
+const SIDEBAR_WIDTH_MOBILE = 'min(18rem, 85vw)'
 const SIDEBAR_WIDTH_ICON = '3rem'
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b'
 
@@ -49,7 +49,7 @@ export function SidebarProvider({
   )
 
   const toggleSidebar = React.useCallback(() => {
-    return window.innerWidth < 768
+    return window.innerWidth < 1024
       ? setOpenMobile((prev) => !prev)
       : setOpen((prev) => !prev)
   }, [setOpen])
@@ -137,7 +137,7 @@ export const Sidebar = React.forwardRef(
         <Sheet open={openMobile} onOpenChange={setOpenMobile}>
           <SheetContent
             side={side}
-            className="w-[var(--sidebar-width-mobile,18rem)] bg-sidebar p-0 text-sidebar-foreground border-sidebar-border sm:hidden"
+            className="w-[var(--sidebar-width-mobile,min(18rem,85vw))] max-w-[85vw] bg-sidebar p-0 text-sidebar-foreground border-sidebar-border lg:hidden"
           >
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
@@ -146,7 +146,7 @@ export const Sidebar = React.forwardRef(
         {/* Desktop sidebar */}
         <div
           ref={ref}
-          className="group peer hidden md:block text-sidebar-foreground"
+          className="group peer hidden lg:block text-sidebar-foreground"
           data-state={state}
           data-collapsible={state === 'collapsed' ? collapsible : ''}
           data-variant={variant}
@@ -195,14 +195,14 @@ export const SidebarTrigger = React.forwardRef(({ className, onClick, ...props }
       ref={ref}
       variant="ghost"
       size="icon"
-      className={cn('h-8 w-8', className)}
+      className={cn('size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-0 hover:bg-accent hover:text-accent-foreground', className)}
       onClick={(e) => {
         onClick?.(e)
         toggleSidebar()
       }}
       {...props}
     >
-      <PanelLeft className="size-4" />
+      <PanelLeft className="size-5 sm:size-4" />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )

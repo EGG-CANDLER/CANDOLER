@@ -174,16 +174,29 @@
 }
 
 @layer base {
-  * {
+  *, ::before, ::after {
+    box-sizing: border-box;
     outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
   }
   html {
     font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
   }
   body {
     background-color: var(--background);
     color: var(--foreground);
     min-height: 100%;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    width: 100%;
+  }
+  img, svg, video, canvas, audio, iframe, embed, object {
+    max-width: 100%;
+    height: auto;
+  }
+  input, textarea, select {
+    font-size: 1rem; /* 16px min to prevent iOS Safari auto-zoom */
   }
   [role="button"],
   [role="checkbox"],

@@ -28,15 +28,15 @@ export const DialogContent = React.forwardRef(
       <BaseDialog.Popup
         ref={ref}
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-background p-6 shadow-md duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 focus-visible:outline-none',
+          'fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-background p-4 sm:p-6 shadow-md duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 focus-visible:outline-none',
           className,
         )}
         {...props}
       >
         {children}
         {showClose && (
-          <BaseDialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none cursor-pointer">
-            <X className="size-4" />
+          <BaseDialog.Close className="absolute right-3 top-3 sm:right-4 sm:top-4 rounded-sm p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none cursor-pointer">
+            <X className="size-5" />
             <span className="sr-only">Close</span>
           </BaseDialog.Close>
         )}
