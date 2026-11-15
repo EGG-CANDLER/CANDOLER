@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useTheme } from 'next-themes'
 import { Moon, Sun } from 'lucide-react'
 
+import { cn } from '../../lib/utils'
 import { Button } from './button'
 
 export function ModeToggle({ className }) {
@@ -11,7 +12,7 @@ export function ModeToggle({ className }) {
     <Button
       variant="outline"
       size="icon"
-      className={className}
+      className={cn('min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0', className)}
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       title="Toggle light / dark mode"
     >
