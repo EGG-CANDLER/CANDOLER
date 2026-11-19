@@ -8,6 +8,8 @@ import {
   Filter,
   RefreshCw,
   RotateCcw,
+  RotateCw,
+  Trash2,
 } from 'lucide-react'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
@@ -24,7 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from './ui/Card'
-import { CountUp } from './ui/CountUp'
 import farmPoultryImg from '../images/chicken-eggs-wooden-table-background-farm-chickens-342155306.webp'
 
 const DAYS = Array.from({ length: 21 }, (_, index) => `Day ${index + 1}`)
@@ -36,6 +37,7 @@ function confidenceText(value) {
 
 export default function ScansBrowser({ mode }) {
   const isArchived = mode === 'archives'
+  const isTrash = mode === 'trash'
   const browserRef = React.useRef(null)
 
   const [day, setDay] = React.useState('')
@@ -49,6 +51,8 @@ export default function ScansBrowser({ mode }) {
   const [error, setError] = React.useState('')
   const [modalItem, setModalItem] = React.useState(null)
   const [busyId, setBusyId] = React.useState(null)
+  const [itemToDelete, setItemToDelete] = React.useState(null)
+  const [deletingPermanent, setDeletingPermanent] = React.useState(false)
 
   // GSAP entrance for the browser container and stat chips
   useGSAP(
@@ -89,9 +93,14 @@ export default function ScansBrowser({ mode }) {
       if (appliedDay) params.day = appliedDay
       if (appliedDate) params.date = appliedDate
 
-      const result = isArchived
-        ? await api.archives(params)
-        : await api.logs(params)
+      let result
+      if (isTrash) {
+        result = await api.trash(params)
+      } else if (isArchived) {
+        result = await api.archives(params)
+      } else {
+        result = await api.logs(params)
+      }
       setData(result)
     } catch (err) {
       setData(null)
@@ -99,7 +108,7 @@ export default function ScansBrowser({ mode }) {
     } finally {
       setLoading(false)
     }
-  }, [page, appliedDay, appliedDate, isArchived])
+  }, [page, appliedDay, appliedDate, isArchived, isTrash])
 
   React.useEffect(() => {
     load()
@@ -120,30 +129,97 @@ export default function ScansBrowser({ mode }) {
     setAppliedDate('')
   }
 
-  async function handleToggleArchive(item) {
+  // Logs -> Archive
+  async function handleArchive(item) {
     if (busyId) return
     setBusyId(item.id)
+    setError('')
     try {
-      if (isArchived) {
-        await api.unarchive(item.id)
-      } else {
-        await api.archive(item.id)
-      }
-      load()
+      await api.archiveLog(item.id)
+      await load()
     } catch (err) {
-      setError(err.message || 'Operation failed')
+      setError(err.message || 'Archive failed')
     } finally {
       setBusyId(null)
+    }
+  }
+
+  // Archive -> Logs
+  async function handleRestoreFromArchive(item) {
+    if (busyId) return
+    setBusyId(item.id)
+    setError('')
+    try {
+      await api.restoreLog(item.id)
+      await load()
+    } catch (err) {
+      setError(err.message || 'Restore failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // Archive -> Trash
+  async function handleMoveToTrash(item) {
+    if (busyId) return
+    setBusyId(item.id)
+    setError('')
+    try {
+      await api.trashLog(item.id)
+      await load()
+    } catch (err) {
+      setError(err.message || 'Moving to trash failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // Trash -> Archive
+  async function handleRestoreFromTrash(item) {
+    if (busyId) return
+    setBusyId(item.id)
+    setError('')
+    try {
+      await api.restoreTrashLog(item.id)
+      await load()
+    } catch (err) {
+      setError(err.message || 'Restore from trash failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // Trash -> Delete permanently
+  async function handleConfirmPermanentDelete() {
+    if (!itemToDelete || deletingPermanent) return
+    setDeletingPermanent(true)
+    setError('')
+    try {
+      await api.deleteLogPermanent(itemToDelete.id)
+      setItemToDelete(null)
+      await load()
+    } catch (err) {
+      setError(err.message || 'Permanent deletion failed')
+    } finally {
+      setDeletingPermanent(false)
     }
   }
 
   const logs = data?.logs || []
   const total = data?.total || 0
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE))
-  const title = isArchived ? 'Incubation Archives' : 'Inspection Detection Logs'
-  const description = isArchived
-    ? 'Historical records archived from active detection runs'
-    : 'All saved candling detection snapshots and incubation classifications'
+
+  const title = isTrash
+    ? 'Trash'
+    : isArchived
+      ? 'Incubation Archives'
+      : 'Inspection Detection Logs'
+
+  const description = isTrash
+    ? 'Discarded candling scans. Items can be restored back to Archive or deleted forever.'
+    : isArchived
+      ? 'Historical records archived from active detection runs'
+      : 'All saved candling detection snapshots and incubation classifications'
 
   return (
     <div ref={browserRef} className="flex flex-col gap-6">
@@ -166,7 +242,7 @@ export default function ScansBrowser({ mode }) {
         </Button>
       </div>
 
-      {/* Filter and stats card */}
+      {/* Filter card */}
       <Card>
         <CardContent className="p-4 sm:p-5">
           <form
@@ -202,8 +278,7 @@ export default function ScansBrowser({ mode }) {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full text-base sm:text-xs h-10 sm:h-9 rounded-lg border border-border bg-background px-3 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-              </input>
+              />
             </div>
 
             <div className="flex items-center gap-2 pt-1 sm:pt-0">
@@ -237,7 +312,7 @@ export default function ScansBrowser({ mode }) {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
             <CardTitle className="text-base font-semibold">
-              {isArchived ? 'Archived Records' : 'Inspection Snapshots'}
+              {isTrash ? 'Trash Records' : isArchived ? 'Archived Records' : 'Inspection Snapshots'}
             </CardTitle>
             <CardDescription>
               Showing {logs.length} of {total} total records
@@ -262,11 +337,21 @@ export default function ScansBrowser({ mode }) {
                   className="size-full object-cover"
                 />
               </div>
-              <p className="font-medium text-foreground">No candling records found</p>
+              <p className="font-medium text-foreground">
+                {isTrash
+                  ? 'Trash is empty'
+                  : isArchived
+                    ? 'No archived records'
+                    : 'No candling records found'}
+              </p>
               <p className="max-w-xs text-muted-foreground">
                 {appliedDay || appliedDate
                   ? 'Try clearing the active filters above.'
-                  : 'Capture or analyze an egg on the scanner to see entries here.'}
+                  : isTrash
+                    ? 'Records moved to Trash will appear here.'
+                    : isArchived
+                      ? 'Archived detections will appear here.'
+                      : 'Capture or analyze an egg on the scanner to see entries here.'}
               </p>
             </div>
           ) : (
@@ -318,16 +403,72 @@ export default function ScansBrowser({ mode }) {
                             >
                               <Eye className="size-3.5" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              disabled={busyId === item.id}
-                              onClick={() => handleToggleArchive(item)}
-                              title={isArchived ? 'Restore to logs' : 'Archive record'}
-                              className="hover:text-primary min-h-[36px] min-w-[36px]"
-                            >
-                              <Archive className="size-3.5" />
-                            </Button>
+
+                            {/* LOGS TAB: Archive */}
+                            {!isArchived && !isTrash && (
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                disabled={busyId === item.id}
+                                onClick={() => handleArchive(item)}
+                                title="Archive record"
+                                className="hover:text-primary min-h-[36px] min-w-[36px]"
+                              >
+                                <Archive className="size-3.5" />
+                              </Button>
+                            )}
+
+                            {/* ARCHIVE TAB: Restore to Logs OR Move to Trash */}
+                            {isArchived && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  disabled={busyId === item.id}
+                                  onClick={() => handleRestoreFromArchive(item)}
+                                  title="Restore to logs"
+                                  className="hover:text-primary min-h-[36px] min-w-[36px]"
+                                >
+                                  <RotateCcw className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  disabled={busyId === item.id}
+                                  onClick={() => handleMoveToTrash(item)}
+                                  title="Move to Trash"
+                                  className="hover:text-destructive text-muted-foreground min-h-[36px] min-w-[36px]"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </>
+                            )}
+
+                            {/* TRASH TAB: Restore to Archive OR Delete forever */}
+                            {isTrash && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  disabled={busyId === item.id}
+                                  onClick={() => handleRestoreFromTrash(item)}
+                                  title="Restore to Archive"
+                                  className="hover:text-primary min-h-[36px] min-w-[36px]"
+                                >
+                                  <RotateCw className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  disabled={busyId === item.id}
+                                  onClick={() => setItemToDelete(item)}
+                                  title="Delete forever"
+                                  className="hover:text-destructive text-destructive min-h-[36px] min-w-[36px]"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -368,16 +509,67 @@ export default function ScansBrowser({ mode }) {
                       >
                         <Eye className="size-3.5" /> View
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        disabled={busyId === item.id}
-                        onClick={() => handleToggleArchive(item)}
-                        className="gap-1 min-h-[36px] text-xs px-2.5"
-                      >
-                        <Archive className="size-3.5" />
-                        {isArchived ? 'Restore' : 'Archive'}
-                      </Button>
+
+                      {/* LOGS TAB Mobile */}
+                      {!isArchived && !isTrash && (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          disabled={busyId === item.id}
+                          onClick={() => handleArchive(item)}
+                          className="gap-1 min-h-[36px] text-xs px-2.5"
+                        >
+                          <Archive className="size-3.5" /> Archive
+                        </Button>
+                      )}
+
+                      {/* ARCHIVE TAB Mobile */}
+                      {isArchived && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            disabled={busyId === item.id}
+                            onClick={() => handleRestoreFromArchive(item)}
+                            className="gap-1 min-h-[36px] text-xs px-2.5"
+                          >
+                            <RotateCcw className="size-3.5" /> Restore
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            disabled={busyId === item.id}
+                            onClick={() => handleMoveToTrash(item)}
+                            className="gap-1 min-h-[36px] text-xs px-2.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          >
+                            <Trash2 className="size-3.5" /> Trash
+                          </Button>
+                        </>
+                      )}
+
+                      {/* TRASH TAB Mobile */}
+                      {isTrash && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            disabled={busyId === item.id}
+                            onClick={() => handleRestoreFromTrash(item)}
+                            className="gap-1 min-h-[36px] text-xs px-2.5"
+                          >
+                            <RotateCw className="size-3.5" /> Restore
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="xs"
+                            disabled={busyId === item.id}
+                            onClick={() => setItemToDelete(item)}
+                            className="gap-1 min-h-[36px] text-xs px-2.5"
+                          >
+                            <Trash2 className="size-3.5" /> Delete Forever
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -414,6 +606,50 @@ export default function ScansBrowser({ mode }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog for Permanent Deletion */}
+      {itemToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-foreground">Permanently Delete Scan?</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                This will permanently remove the detection snapshot (
+                <span className="font-semibold text-foreground">
+                  {itemToDelete.predicted_day || 'Egg scan'} — {itemToDelete.date_display || itemToDelete.date}
+                </span>
+                ) from your database and delete its stored image from Supabase Storage.
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={deletingPermanent}
+                onClick={() => setItemToDelete(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={deletingPermanent}
+                onClick={handleConfirmPermanentDelete}
+                className="gap-1.5"
+              >
+                <Trash2 className="size-3.5" />
+                {deletingPermanent ? 'Deleting…' : 'Delete Forever'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ImageModal
         isOpen={Boolean(modalItem)}

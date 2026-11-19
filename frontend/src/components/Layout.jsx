@@ -6,6 +6,7 @@ import {
   FileText,
   LogOut,
   Shield,
+  Trash2,
 } from 'lucide-react'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Scanner', icon: Camera, exact: true },
   { to: '/logs', label: 'Detection Logs', icon: FileText },
   { to: '/archives', label: 'Archive', icon: Archive },
+  { to: '/trash', label: 'Trash', icon: Trash2 },
   { to: '/manager', label: 'Manager Console', icon: Shield },
 ]
 
@@ -276,6 +278,12 @@ export default function Layout() {
                 className="py-1 px-1.5 transition-colors hover:text-foreground hover:underline underline-offset-4"
               >
                 Archive
+              </NavLink>
+              <NavLink
+                to="/trash"
+                className="py-1 px-1.5 transition-colors hover:text-foreground hover:underline underline-offset-4"
+              >
+                Trash
               </NavLink>
               <NavLink
                 to="/manager"

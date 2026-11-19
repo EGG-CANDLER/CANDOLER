@@ -119,7 +119,7 @@ CORS(
     app,
     origins=ALLOWED_ORIGINS,
     allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "OPTIONS"],
+    methods=["GET", "POST", "DELETE", "OPTIONS"],
     supports_credentials=False,
 )
 limiter.init_app(app)
@@ -322,19 +322,62 @@ def _update_scan(log_id: int, patch: dict) -> dict | None:
     return data[0] if data else None
 
 
+def _delete_scan(log_id: int) -> bool:
+    _require_supabase()
+    response = requests.delete(
+        f"{SUPABASE_URL}/rest/v1/egg_scans",
+        headers=_service_headers(),
+        params=[("id", f"eq.{log_id}"), ("user_id", f"eq.{_current_user_id()}")],
+        timeout=60,
+    )
+    response.raise_for_status()
+    return True
+
+
+def delete_from_storage(image_url: str | None) -> bool:
+    """Extract object path from public storage URL and remove it from Supabase Storage."""
+    if not image_url or f"/{IMAGE_BUCKET}/" not in image_url:
+        return False
+    _require_supabase()
+    try:
+        # URL format: .../storage/v1/object/public/egg-images/<object_path>
+        object_path = image_url.split(f"/{IMAGE_BUCKET}/", 1)[1].split("?")[0]
+        if not object_path:
+            return False
+        response = requests.delete(
+            f"{SUPABASE_URL}/storage/v1/object/{IMAGE_BUCKET}/{object_path}",
+            headers=_service_headers(),
+            timeout=60,
+        )
+        return response.status_code in (200, 204)
+    except Exception as e:
+        app.logger.warning(f"Failed to delete storage file {image_url}: {e}")
+        return False
+
+
 def _query_scans(
-    archived: bool, day: str | None, date: str | None, page: int, per_page: int
+    status_mode: str, day: str | None, date: str | None, page: int, per_page: int
 ):
-    """Return (rows, total) for the current user with day/date filters."""
+    """Return (rows, total) for the current user with status/day/date filters.
+
+    status_mode can be 'active', 'archived', or 'trash'.
+    """
     _require_supabase()
     params = [
         ("select", "*"),
         ("user_id", f"eq.{_current_user_id()}"),
-        ("is_archived", f"eq.{str(archived).lower()}"),
         ("order", "created_at.desc"),
         ("limit", str(per_page)),
         ("offset", str((page - 1) * per_page)),
     ]
+    if status_mode == "trash":
+        params.append(("deleted_at", "not.is.null"))
+    elif status_mode == "archived":
+        params.append(("deleted_at", "is.null"))
+        params.append(("is_archived", "eq.true"))
+    else:  # active (logs)
+        params.append(("deleted_at", "is.null"))
+        params.append(("is_archived", "eq.false"))
     if day:
         normalized = day.replace("_", " ").strip()
         if normalized.isdigit():
@@ -486,6 +529,8 @@ def _row_to_dict(row: dict) -> dict:
         "low_confidence": bool(row.get("low_confidence")),
         "warning": row.get("warning"),
         "is_archived": bool(row.get("is_archived")),
+        "deleted_at": row.get("deleted_at"),
+        "is_trashed": bool(row.get("deleted_at")),
         "created_at": row.get("created_at"),
         "date": date_s,
         "time": time_s,
@@ -510,7 +555,10 @@ def home():
                 "/api/logs/<id>",
                 "/api/logs/<id>/archive",
                 "/api/logs/<id>/restore",
+                "/api/logs/<id>/trash",
+                "/api/logs/<id>/restore-trash",
                 "/api/archives",
+                "/api/trash",
             ],
         }
     )
@@ -643,9 +691,9 @@ def api_analyze():
 
 
 # ------------------------------------------------------------------
-# Logs / archives
+# Logs / archives / trash
 # ------------------------------------------------------------------
-def _handle_list(archived: bool):
+def _handle_list(status_mode: str):
     day = (request.args.get("day") or "").strip()
     date = (request.args.get("date") or "").strip()
     try:
@@ -658,7 +706,7 @@ def _handle_list(archived: bool):
         per_page = 10
 
     try:
-        rows, total = _query_scans(archived, day or None, date or None, page, per_page)
+        rows, total = _query_scans(status_mode, day or None, date or None, page, per_page)
     except Exception as error:
         return jsonify({"success": False, "message": f"Database error: {error}"}), 502
 
@@ -678,13 +726,19 @@ def _handle_list(archived: bool):
 @app.get("/api/logs")
 @auth_required
 def api_logs():
-    return _handle_list(False)
+    return _handle_list("active")
 
 
 @app.get("/api/archives")
 @auth_required
 def api_archives():
-    return _handle_list(True)
+    return _handle_list("archived")
+
+
+@app.get("/api/trash")
+@auth_required
+def api_trash():
+    return _handle_list("trash")
 
 
 @app.get("/api/logs/<int:log_id>")
@@ -706,6 +760,10 @@ def _set_archived(log_id: int, value: bool, active_msg: str, archived_msg: str):
         return jsonify({"success": False, "message": f"Database error: {error}"}), 502
     if row is None:
         return jsonify({"success": False, "message": "Log not found"}), 404
+    if row.get("deleted_at"):
+        return jsonify(
+            {"success": False, "message": "Item is in trash. Restore from trash first."}
+        ), 400
     if bool(row.get("is_archived")) == value:
         return jsonify(
             {"success": False, "message": archived_msg if value else active_msg}
@@ -743,6 +801,91 @@ def restore_log(log_id: int):
         False,
         "This detection is already active.",
         "This detection is already archived.",
+    )
+
+
+@app.post("/api/logs/<int:log_id>/trash")
+@auth_required
+def trash_log(log_id: int):
+    """Move scan to trash (Logs -> Archive -> Trash flow)."""
+    try:
+        row = _get_scan(log_id)
+    except Exception as error:
+        return jsonify({"success": False, "message": f"Database error: {error}"}), 502
+    if row is None:
+        return jsonify({"success": False, "message": "Log not found"}), 404
+    if row.get("deleted_at"):
+        return jsonify({"success": False, "message": "This detection is already in trash."}), 400
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        # Preserve is_archived = true so restoring returns it back to Archive
+        _update_scan(log_id, {"deleted_at": now_iso, "is_archived": True})
+    except Exception as error:
+        return jsonify({"success": False, "message": f"Database error: {error}"}), 502
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Detection log moved to trash successfully.",
+            "log_id": log_id,
+        }
+    )
+
+
+@app.post("/api/logs/<int:log_id>/restore-trash")
+@auth_required
+def restore_trash_log(log_id: int):
+    """Restore scan from trash back to Archive."""
+    try:
+        row = _get_scan(log_id)
+    except Exception as error:
+        return jsonify({"success": False, "message": f"Database error: {error}"}), 502
+    if row is None:
+        return jsonify({"success": False, "message": "Log not found"}), 404
+    if not row.get("deleted_at"):
+        return jsonify({"success": False, "message": "This detection is not in trash."}), 400
+
+    try:
+        _update_scan(log_id, {"deleted_at": None, "is_archived": True})
+    except Exception as error:
+        return jsonify({"success": False, "message": f"Database error: {error}"}), 502
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Detection log restored from trash successfully.",
+            "log_id": log_id,
+        }
+    )
+
+
+@app.delete("/api/logs/<int:log_id>")
+@auth_required
+def delete_log_permanent(log_id: int):
+    """Permanently delete scan row and remove image from Supabase Storage."""
+    try:
+        row = _get_scan(log_id)
+    except Exception as error:
+        return jsonify({"success": False, "message": f"Database error: {error}"}), 502
+    if row is None:
+        return jsonify({"success": False, "message": "Log not found"}), 404
+
+    image_url = row.get("image_url")
+    if image_url:
+        delete_from_storage(image_url)
+
+    try:
+        _delete_scan(log_id)
+    except Exception as error:
+        return jsonify({"success": False, "message": f"Database delete failed: {error}"}), 502
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Detection log permanently deleted.",
+            "log_id": log_id,
+        }
     )
 
 
