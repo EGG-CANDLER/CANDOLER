@@ -115,9 +115,22 @@ export const api = {
     request('/api/analyze', { method: 'POST', body: { image }, ...options }),
   logs: (params, options) => request('/api/logs', { params, ...options }),
   archives: (params, options) => request('/api/archives', { params, ...options }),
+  trash: (params, options) => request('/api/trash', { params, ...options }),
   logDetail: (id, options) => request(`/api/logs/${id}`, options),
   archiveLog: (id, options) =>
     request(`/api/logs/${id}/archive`, { method: 'POST', ...options }),
   restoreLog: (id, options) =>
     request(`/api/logs/${id}/restore`, { method: 'POST', ...options }),
+  // Aliases for compatibility
+  archive: (id, options) =>
+    request(`/api/logs/${id}/archive`, { method: 'POST', ...options }),
+  unarchive: (id, options) =>
+    request(`/api/logs/${id}/restore`, { method: 'POST', ...options }),
+  // Trash flow endpoints
+  trashLog: (id, options) =>
+    request(`/api/logs/${id}/trash`, { method: 'POST', ...options }),
+  restoreTrashLog: (id, options) =>
+    request(`/api/logs/${id}/restore-trash`, { method: 'POST', ...options }),
+  deleteLogPermanent: (id, options) =>
+    request(`/api/logs/${id}`, { method: 'DELETE', ...options }),
 }
