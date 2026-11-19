@@ -266,21 +266,25 @@ export default function Manager() {
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border text-center text-xs">
                 <div className="p-2 rounded-lg bg-muted/40 border border-border">
                   <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
-                    Inference Runtime
+                    Inference Engine
                   </span>
-                  <span className="font-mono font-medium text-foreground text-sm">~45ms</span>
+                  <span className="font-mono font-medium text-foreground text-sm">
+                    {modelReady ? 'YOLOv11' : 'Offline'}
+                  </span>
                 </div>
                 <div className="p-2 rounded-lg bg-muted/40 border border-border">
                   <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
-                    Precision
+                    Confidence Cutoff
                   </span>
-                  <span className="font-mono font-medium text-foreground text-sm">FP16</span>
+                  <span className="font-mono font-medium text-foreground text-sm">
+                    {modelStatus?.min_confidence ? `${(modelStatus.min_confidence * 100).toFixed(0)}%` : '60%'}
+                  </span>
                 </div>
                 <div className="p-2 rounded-lg bg-muted/40 border border-border">
                   <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
-                    Input Res
+                    Target Classes
                   </span>
-                  <span className="font-mono font-medium text-foreground text-sm">640×640</span>
+                  <span className="font-mono font-medium text-foreground text-sm">Day 1–21</span>
                 </div>
               </div>
             </CardContent>
