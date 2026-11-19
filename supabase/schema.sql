@@ -16,6 +16,7 @@ create table if not exists public.egg_scans (
     low_confidence  boolean not null default false,
     warning         text,
     is_archived     boolean not null default false,
+    deleted_at      timestamptz default null,
     created_at      timestamptz not null default now()
 );
 
@@ -25,6 +26,9 @@ create index if not exists egg_scans_created_at_idx
 
 create index if not exists egg_scans_predicted_day_idx
     on public.egg_scans (predicted_day);
+
+create index if not exists egg_scans_deleted_at_idx
+    on public.egg_scans (deleted_at);
 
 -- ---------- Row Level Security (required) ----------
 alter table public.egg_scans enable row level security;
