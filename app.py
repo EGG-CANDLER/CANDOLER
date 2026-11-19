@@ -483,8 +483,8 @@ def validate_image_bytes(image_bytes: bytes):
 
     if float(array.mean()) < DARK_MEAN_THRESHOLD:
         warnings.append(
-            "Captured image looks too dark or unusable. "
-            "Improve candling light and recapture."
+            "Lighting recommendation: Candling illumination appears low. "
+            "For optimal accuracy, align the candling light source directly beneath the egg."
         )
     return rgb, warnings
 
