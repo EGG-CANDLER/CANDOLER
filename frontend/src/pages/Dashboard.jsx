@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   FileText,
   HelpCircle,
+  Info,
+  Lightbulb,
   RefreshCw,
   Sparkles,
   Upload,
@@ -335,17 +337,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Model readiness alert if unavailable */}
-      {modelStatus && !modelStatus.model_ready && (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertTitle>AI Model Unavailable</AlertTitle>
-          <AlertDescription>
-            AI model not trained yet — predictions are unavailable. Train the model first.
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Main Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* ---------------- 1. Live Camera Scanner ---------------- */}
@@ -528,15 +519,20 @@ export default function Dashboard() {
               )}
 
               {showWarning && (
-                <Alert variant="destructive">
-                  <AlertCircle className="size-4" />
-                  <AlertDescription>
-                    {lowConfidence
-                      ? result?.status ||
-                        'Low confidence — please recapture under better candling conditions.'
-                      : warnings.join(' ')}
-                  </AlertDescription>
-                </Alert>
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+                  <Lightbulb className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-semibold text-amber-950 dark:text-amber-100">
+                      Candling Recommendation
+                    </p>
+                    <p className="leading-relaxed opacity-90">
+                      {lowConfidence
+                        ? result?.status ||
+                          'Lighting is sub-optimal for high confidence. Improve candling light angle and recapture.'
+                        : warnings.join(' ')}
+                    </p>
+                  </div>
+                </div>
               )}
 
               {!result && !preview ? (
@@ -742,7 +738,7 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {showWarning
                   ? lowConfidence
-                    ? 'Low confidence — recapture under better optical lighting.'
+                    ? 'Tip: Adjust light focus and recapture for higher optical confidence.'
                     : warnings.join(' ')
                   : result
                     ? 'Prediction recorded in local detection database.'
