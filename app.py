@@ -701,7 +701,7 @@ def _handle_list(status_mode: str):
     except ValueError:
         page = 1
     try:
-        per_page = min(max(int(request.args.get("per_page") or 10), 1), 50)
+        per_page = min(max(int(request.args.get("per_page") or 10), 1), 100)
     except ValueError:
         per_page = 10
 
