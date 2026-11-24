@@ -29,7 +29,7 @@ import {
 import farmPoultryImg from '../images/chicken-eggs-wooden-table-background-farm-chickens-342155306.webp'
 
 const DAYS = Array.from({ length: 21 }, (_, index) => `Day ${index + 1}`)
-const PER_PAGE = 10
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
 function confidenceText(value) {
   return typeof value === 'number' ? `${value.toFixed(2)}%` : '—'
@@ -45,6 +45,7 @@ export default function ScansBrowser({ mode }) {
   const [appliedDay, setAppliedDay] = React.useState('')
   const [appliedDate, setAppliedDate] = React.useState('')
   const [page, setPage] = React.useState(1)
+  const [perPage, setPerPage] = React.useState(10)
 
   const [data, setData] = React.useState(null)
   const [loading, setLoading] = React.useState(true)
@@ -89,7 +90,7 @@ export default function ScansBrowser({ mode }) {
     setLoading(true)
     setError('')
     try {
-      const params = { page, per_page: PER_PAGE }
+      const params = { page, per_page: perPage }
       if (appliedDay) params.day = appliedDay
       if (appliedDate) params.date = appliedDate
 
@@ -108,7 +109,7 @@ export default function ScansBrowser({ mode }) {
     } finally {
       setLoading(false)
     }
-  }, [page, appliedDay, appliedDate, isArchived, isTrash])
+  }, [page, perPage, appliedDay, appliedDate, isArchived, isTrash])
 
   React.useEffect(() => {
     load()
@@ -207,7 +208,12 @@ export default function ScansBrowser({ mode }) {
 
   const logs = data?.logs || []
   const total = data?.total || 0
-  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE))
+  const totalPages = Math.max(1, Math.ceil(total / perPage))
+
+  const handlePerPageChange = (e) => {
+    setPerPage(Number(e.target.value))
+    setPage(1)
+  }
 
   const title = isTrash
     ? 'Trash'
@@ -309,7 +315,7 @@ export default function ScansBrowser({ mode }) {
 
       {/* Table list */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
           <div>
             <CardTitle className="text-base font-semibold">
               {isTrash ? 'Trash Records' : isArchived ? 'Archived Records' : 'Inspection Snapshots'}
@@ -318,9 +324,27 @@ export default function ScansBrowser({ mode }) {
               Showing {logs.length} of {total} total records
             </CardDescription>
           </div>
-          <Badge variant="leaf" className="font-mono text-xs">
-            Page {page} of {totalPages}
-          </Badge>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <label htmlFor="per-page-select" className="whitespace-nowrap">Show:</label>
+              <select
+                id="per-page-select"
+                value={perPage}
+                onChange={handlePerPageChange}
+                aria-label="Records per page"
+                className="h-8 rounded-md border border-border bg-background px-2 py-0.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size} / page
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Badge variant="leaf" className="font-mono text-xs">
+              Page {page} of {totalPages}
+            </Badge>
+          </div>
         </CardHeader>
 
         <CardContent className="p-0">
@@ -579,29 +603,46 @@ export default function ScansBrowser({ mode }) {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t border-border text-xs">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1 || loading}
-                className="gap-1 text-xs"
-              >
-                <ChevronLeft className="size-3.5" /> Previous
-              </Button>
-              <span className="text-muted-foreground">
-                Page <span className="font-semibold text-foreground">{page}</span> of{' '}
-                <span className="font-semibold text-foreground">{totalPages}</span>
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages || loading}
-                className="gap-1 text-xs"
-              >
-                Next <ChevronRight className="size-3.5" />
-              </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border text-xs gap-3">
+              <div className="flex items-center gap-1.5 text-muted-foreground order-2 sm:order-1">
+                <span>Show:</span>
+                <select
+                  value={perPage}
+                  onChange={handlePerPageChange}
+                  aria-label="Records per page (bottom)"
+                  className="h-7 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size} / page
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center justify-between w-full sm:w-auto gap-2 order-1 sm:order-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                  className="gap-1 text-xs"
+                >
+                  <ChevronLeft className="size-3.5" /> Previous
+                </Button>
+                <span className="text-muted-foreground">
+                  Page <span className="font-semibold text-foreground">{page}</span> of{' '}
+                  <span className="font-semibold text-foreground">{totalPages}</span>
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  className="gap-1 text-xs"
+                >
+                  Next <ChevronRight className="size-3.5" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
