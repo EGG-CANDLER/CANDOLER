@@ -382,7 +382,7 @@ def _query_scans(
         normalized = day.replace("_", " ").strip()
         if normalized.isdigit():
             normalized = f"Day {normalized}"
-        params.append(("predicted_day", f'eq."{normalized}"'))
+        params.append(("predicted_day", f"eq.{normalized}"))
     if date:
         try:
             start = datetime.strptime(date, "%Y-%m-%d")

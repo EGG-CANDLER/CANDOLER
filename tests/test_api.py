@@ -132,7 +132,7 @@ def test_logs_filters_and_response_shape(client, monkeypatch):
     def fake_get(url, **kwargs):
         params = dict(kwargs.get("params") or [])
         # day + date filters must reach PostgREST
-        assert params.get("predicted_day") == 'eq."Day 9"'
+        assert params.get("predicted_day") == "eq.Day 9"
         assert "created_at.gte.2026-10-07" in params.get("and", "")
         assert "created_at.lt.2026-10-08" in params.get("and", "")
         return _Resp(rows, headers={"Content-Range": "0-0/1"})
