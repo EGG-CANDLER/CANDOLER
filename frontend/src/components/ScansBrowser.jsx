@@ -1,14 +1,23 @@
 import * as React from 'react'
 import {
+  Activity,
+  AlertTriangle,
   Archive,
+  Award,
   Calendar,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Egg,
   Eye,
   Filter,
+  Layers,
+  Percent,
   RefreshCw,
   RotateCcw,
   RotateCw,
+  Sparkles,
   Trash2,
 } from 'lucide-react'
 import gsap from 'gsap'
@@ -26,10 +35,22 @@ import {
   CardHeader,
   CardTitle,
 } from './ui/Card'
+import { CountUp } from './ui/CountUp'
 import farmPoultryImg from '../images/chicken-eggs-wooden-table-background-farm-chickens-342155306.webp'
 
 const DAYS = Array.from({ length: 21 }, (_, index) => `Day ${index + 1}`)
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
+const AVAILABLE_KPIS = [
+  { id: 'total', label: 'Total Records', description: 'Count of scans matching current filters' },
+  { id: 'avgConfidence', label: 'Average Confidence', description: 'Mean AI model prediction confidence' },
+  { id: 'highConfidenceRate', label: 'High Confidence Rate', description: 'Scans with confidence ≥ 80%' },
+  { id: 'embryoRate', label: 'Embryo Detected Rate', description: 'Scans with identified developmental stage' },
+  { id: 'topDay', label: 'Most Frequent Day', description: 'Most common incubation day in the batch' },
+  { id: 'lowConfCount', label: 'Low Confidence Alerts', description: 'Scans flagged with low confidence' },
+]
+
+const DEFAULT_KPIS = ['total', 'avgConfidence', 'highConfidenceRate', 'topDay']
 
 function confidenceText(value) {
   return typeof value === 'number' ? `${value.toFixed(2)}%` : '—'
@@ -54,6 +75,35 @@ export default function ScansBrowser({ mode }) {
   const [busyId, setBusyId] = React.useState(null)
   const [itemToDelete, setItemToDelete] = React.useState(null)
   const [deletingPermanent, setDeletingPermanent] = React.useState(false)
+
+  // Customizable KPI widgets (saved in localStorage)
+  const [selectedKpis, setSelectedKpis] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('candoler_selected_kpis')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return DEFAULT_KPIS
+  })
+  const [showKpiPicker, setShowKpiPicker] = React.useState(false)
+
+  const toggleKpi = (id) => {
+    setSelectedKpis((prev) => {
+      let updated
+      if (prev.includes(id)) {
+        if (prev.length <= 1) return prev // Keep at least one
+        updated = prev.filter((k) => k !== id)
+      } else {
+        updated = [...prev, id]
+      }
+      try {
+        localStorage.setItem('candoler_selected_kpis', JSON.stringify(updated))
+      } catch {}
+      return updated
+    })
+  }
 
   // GSAP entrance for the browser container and stat chips
   useGSAP(
@@ -210,6 +260,54 @@ export default function ScansBrowser({ mode }) {
   const total = data?.total || 0
   const totalPages = Math.max(1, Math.ceil(total / perPage))
 
+  // Dynamically computed metrics from current results
+  const metrics = React.useMemo(() => {
+    const confidences = logs
+      .map((l) => Number(l.confidence) || 0)
+      .filter((c) => c > 0)
+    const avgConf = confidences.length
+      ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+      : null
+
+    const highConfCount = confidences.filter((c) => c >= 80).length
+    const highConfRate = confidences.length
+      ? (highConfCount / confidences.length) * 100
+      : null
+
+    const embryoIdentified = logs.filter(
+      (l) => l.stage && l.stage !== '—' && !l.low_confidence
+    ).length
+    const embryoRate = logs.length ? (embryoIdentified / logs.length) * 100 : null
+
+    const dayCounts = {}
+    logs.forEach((l) => {
+      const d = l.predicted_day
+      if (d && d !== '—') {
+        dayCounts[d] = (dayCounts[d] || 0) + 1
+      }
+    })
+    let topDay = '—'
+    let topCount = 0
+    Object.entries(dayCounts).forEach(([d, count]) => {
+      if (count > topCount) {
+        topCount = count
+        topDay = d
+      }
+    })
+
+    const lowConfCount = logs.filter((l) => l.low_confidence || (Number(l.confidence) > 0 && Number(l.confidence) < 60)).length
+
+    return {
+      total,
+      avgConf,
+      highConfRate,
+      embryoRate,
+      topDay,
+      topCount,
+      lowConfCount,
+    }
+  }, [logs, total])
+
   const handlePerPageChange = (e) => {
     setPerPage(Number(e.target.value))
     setPage(1)
@@ -236,17 +334,263 @@ export default function ScansBrowser({ mode }) {
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">{description}</p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={load}
-          disabled={loading}
-          className="self-start sm:self-auto gap-1.5 min-h-[44px] sm:min-h-0"
-        >
-          <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {!isTrash && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowKpiPicker(!showKpiPicker)}
+              className="gap-1.5 min-h-[44px] sm:min-h-0 text-xs"
+            >
+              <Sparkles className="size-3.5 text-primary" />
+              Customize KPIs
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={load}
+            disabled={loading}
+            className="gap-1.5 min-h-[44px] sm:min-h-0"
+          >
+            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {/* KPI Picker Sheet / Panel (when user clicks Customize KPIs) */}
+      {showKpiPicker && !isTrash && (
+        <Card className="border-primary/25 bg-primary/5">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary" />
+                  Select Visible KPIs
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Choose which metrics you want to monitor at a glance.
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowKpiPicker(false)}
+                className="text-xs h-7 px-2"
+              >
+                Close
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {AVAILABLE_KPIS.map((kpi) => {
+                const isSelected = selectedKpis.includes(kpi.id)
+                return (
+                  <button
+                    key={kpi.id}
+                    type="button"
+                    onClick={() => toggleKpi(kpi.id)}
+                    className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-left transition-all ${
+                      isSelected
+                        ? 'border-primary bg-background shadow-xs'
+                        : 'border-border/60 bg-background/50 hover:border-border opacity-70'
+                    }`}
+                  >
+                    <div
+                      className={`size-4 rounded mt-0.5 flex items-center justify-center shrink-0 border ${
+                        isSelected
+                          ? 'bg-primary border-primary text-primary-foreground'
+                          : 'border-muted-foreground/40'
+                      }`}
+                    >
+                      {isSelected && <CheckCircle2 className="size-3" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-foreground">{kpi.label}</div>
+                      <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                        {kpi.description}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* KPI Metric Cards */}
+      {!isTrash && selectedKpis.length > 0 && (
+        <div
+          className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${
+            selectedKpis.length === 1
+              ? 'lg:grid-cols-1'
+              : selectedKpis.length === 2
+                ? 'lg:grid-cols-2'
+                : selectedKpis.length === 3
+                  ? 'lg:grid-cols-3'
+                  : 'lg:grid-cols-4'
+          }`}
+        >
+          {selectedKpis.map((kpiId) => {
+            if (kpiId === 'total') {
+              return (
+                <div key={kpiId} className="gsap-stat-chip">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-medium text-muted-foreground">
+                        Total Records
+                      </CardTitle>
+                      <Layers className="size-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold tracking-tight text-foreground">
+                        <CountUp value={metrics.total} decimals={0} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Matching current filters
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )
+            }
+
+            if (kpiId === 'avgConfidence') {
+              return (
+                <div key={kpiId} className="gsap-stat-chip">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-medium text-muted-foreground">
+                        Mean Confidence
+                      </CardTitle>
+                      <Activity className="size-4 text-[#52B788]" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold tracking-tight text-foreground">
+                        {metrics.avgConf === null ? (
+                          '—'
+                        ) : (
+                          <CountUp value={metrics.avgConf} decimals={1} suffix="%" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Across batch inferences
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )
+            }
+
+            if (kpiId === 'highConfidenceRate') {
+              return (
+                <div key={kpiId} className="gsap-stat-chip">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-medium text-muted-foreground">
+                        High Confidence Rate
+                      </CardTitle>
+                      <Percent className="size-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold tracking-tight text-foreground">
+                        {metrics.highConfRate === null ? (
+                          '—'
+                        ) : (
+                          <CountUp value={metrics.highConfRate} decimals={1} suffix="%" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Confidence ≥ 80%
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )
+            }
+
+            if (kpiId === 'embryoRate') {
+              return (
+                <div key={kpiId} className="gsap-stat-chip">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-medium text-muted-foreground">
+                        Embryo Detection Rate
+                      </CardTitle>
+                      <Egg className="size-4 text-[#52B788]" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold tracking-tight text-foreground">
+                        {metrics.embryoRate === null ? (
+                          '—'
+                        ) : (
+                          <CountUp value={metrics.embryoRate} decimals={1} suffix="%" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Identified stage viable
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )
+            }
+
+            if (kpiId === 'topDay') {
+              return (
+                <div key={kpiId} className="gsap-stat-chip">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-medium text-muted-foreground">
+                        Frequent Incubation Age
+                      </CardTitle>
+                      <Calendar className="size-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold tracking-tight text-foreground">
+                        {metrics.topDay}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {metrics.topCount > 0
+                          ? `${metrics.topCount} records in batch`
+                          : 'No data yet'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )
+            }
+
+            if (kpiId === 'lowConfCount') {
+              return (
+                <div key={kpiId} className="gsap-stat-chip">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-medium text-muted-foreground">
+                        Low Confidence Alerts
+                      </CardTitle>
+                      <AlertTriangle className="size-4 text-destructive" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold tracking-tight text-foreground">
+                        <CountUp value={metrics.lowConfCount} decimals={0} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Scans needing recapturing
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )
+            }
+
+            return null
+          })}
+        </div>
+      )}
 
       {/* Filter card */}
       <Card>
